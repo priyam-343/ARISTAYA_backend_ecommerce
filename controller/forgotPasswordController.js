@@ -538,7 +538,7 @@ table, td { color: #000000; } @media (max-width: 480px) { #u_content_image_1 .v-
 <p style="line-height: 140%;">Thank you for using our service.</p>
 <p style="line-height: 140%;"> </p>
 <p style="line-height: 140%;">Best regards,</p>
-<p style="line-height: 140%;">ARISTAYA.com</p>
+<p style="line-height: 140%;">https://aristaya-frontend-ecommerce.vercel.app</p>
   </div>
 
       </td>
@@ -849,7 +849,7 @@ table, td { color: #000000; } @media (max-width: 480px) { #u_content_image_1 .v-
 <p style="line-height: 140%;">Thank you for using our service.</p>
 <p style="line-height: 140%;"> </p>
 <p style="line-height: 140%;">Best regards,</p>
-<p style="line-height: 140%;">ARISTAYA.com</p>
+<p style="line-height: 140%;">https://aristaya-frontend-ecommerce.vercel.app</p>
   </div>
 
       </td>
