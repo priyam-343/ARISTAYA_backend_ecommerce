@@ -92,11 +92,11 @@ router.post('/register', [
             success = false
             return res.status(400).send({ success, error: "Invalid User" })
         }
-        // password hashing
+        
         const salt = await bcrypt.genSalt(10)
         const secPass = await bcrypt.hash(password, salt)
 
-        // create a new user
+        
         user = await User.create({
             firstName,
             lastName,

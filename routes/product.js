@@ -3,7 +3,7 @@ const router = express.Router();
 const Product = require("../models/Product");
 const authUser = require("../middleware/authUser");
 
-// ROUTE 1: Fetch all products (optional, if you have a general product listing)
+
 router.get("/fetchproduct", async (req, res) => {
   try {
     const products = await Product.find({});
@@ -14,7 +14,7 @@ router.get("/fetchproduct", async (req, res) => {
   }
 });
 
-// NEW ROUTE: Fetch a single product by ID - GET /api/product/fetchproduct/:id
+
 router.get("/fetchproduct/:id", async (req, res) => {
   try {
     const productId = req.params.id;
@@ -39,35 +39,35 @@ router.get("/fetchproduct/:id", async (req, res) => {
 });
 
 
-// ROUTE 2: Fetch products by type (main category from frontend)
+
 router.post("/fetchproduct/type", async (req, res) => {
   try {
-    const { userType } = req.body; // This will be 'men-wear', 'women-wear', 'children-wear', 'shoe', 'perfumes', 'book', 'jewelry'
+    const { userType } = req.body; 
 
     console.log(`[Backend Debug] Received userType for /fetchproduct/type: ${userType}`);
 
-    let query = {}; // Initialize an empty query object
+    let query = {}; 
 
-    // Map the new frontend userType to specific database 'category' and 'type' values
+    
     if (userType === 'men-wear') {
-      // Strictly men's apparel and accessories
+      
       query = { type: 'apparel', $or: [{ category: 'men-cloths' }, { category: 'men-accessories' }] };
     } else if (userType === 'women-wear') {
-      // Strictly women's apparel and accessories
+      
       query = { type: 'apparel', $or: [{ category: 'women-cloths' }, { category: 'women-accessories' }] };
     } else if (userType === 'children-wear') {
-      // Strictly children's apparel
+      
       query = { type: 'apparel', category: 'kids-cloths' };
     } else if (userType === 'shoe') {
       query = { type: 'shoe' };
     } else if (userType === 'perfumes') {
-      query = { type: 'fragrance' }; // Query by new 'fragrance' type
+      query = { type: 'fragrance' }; 
     } else if (userType === 'book') {
       query = { type: 'book' };
     } else if (userType === 'jewelry') {
       query = { type: 'jewelry' };
     } else {
-      // Fallback for any other userType (should ideally not be hit if categories are well-defined)
+      
       query = { $or: [{ category: userType }, { type: userType }] };
     }
 
@@ -84,17 +84,17 @@ router.post("/fetchproduct/type", async (req, res) => {
   }
 });
 
-// ROUTE 3: Fetch products by specific category (sub-filter from frontend)
+
 router.post("/fetchproduct/category", async (req, res) => {
   try {
-    const { userType, userCategory } = req.body; // userType is main category, userCategory is sub-filter
+    const { userType, userCategory } = req.body; 
 
     console.log(`[Backend Debug] Received userType for /fetchproduct/category: ${userType}, userCategory: ${userCategory}`);
 
-    let query = {}; // Base query
-    let sort = {}; // Sorting options
+    let query = {}; 
+    let sort = {}; 
 
-    // First, establish the base query based on the main userType (stricter than before)
+    
     if (userType === 'men-wear') {
       query = { type: 'apparel', $or: [{ category: 'men-cloths' }, { category: 'men-accessories' }] };
     } else if (userType === 'women-wear') {
@@ -113,31 +113,31 @@ router.post("/fetchproduct/category", async (req, res) => {
       query = { $or: [{ category: userType }, { type: userType }] };
     }
 
-    // Apply sub-filters based on userCategory
+    
     if (userCategory && userCategory.toLowerCase() !== 'all') {
       switch (userCategory.toLowerCase()) {
-        // Price Sorting
+        
         case 'pricelowtohigh':
-          sort = { price: 1 }; // Ascending
+          sort = { price: 1 }; 
           break;
         case 'pricehightolow':
-          sort = { price: -1 }; // Descending
+          sort = { price: -1 }; 
           break;
-        // Rating Sorting
+        
         case 'highrated':
-          sort = { rating: -1 }; // Descending
+          sort = { rating: -1 }; 
           break;
         case 'lowrated':
-          sort = { rating: 1 }; // Ascending
+          sort = { rating: 1 }; 
           break;
 
-        // Specific sub-categories for Apparel
+        
         case 't-shirts':
         case 'jeans':
         case 'formalwear':
           if (userType === 'men-wear') {
               query.category = 'men-cloths';
-              query.name = new RegExp(userCategory.replace('-', ' '), 'i'); // Regex for partial match
+              query.name = new RegExp(userCategory.replace('-', ' '), 'i'); 
           }
           break;
         case 'dresses':
@@ -156,7 +156,7 @@ router.post("/fetchproduct/category", async (req, res) => {
               query.name = new RegExp(userCategory, 'i');
           }
           break;
-        case 'accessories': // For both men and women wear
+        case 'accessories': 
             if (userType === 'men-wear') {
                 query.category = 'men-accessories';
             } else if (userType === 'women-wear') {
@@ -164,7 +164,7 @@ router.post("/fetchproduct/category", async (req, res) => {
             }
             break;
 
-        // Specific sub-categories for Shoes
+        
         case 'running':
         case 'football':
         case 'formal':
@@ -174,16 +174,16 @@ router.post("/fetchproduct/category", async (req, res) => {
           }
           break;
 
-        // Specific sub-categories for Perfumes
+        
         case 'men':
         case 'women':
         case 'unisex':
           if (userType === 'perfumes') {
-              query.category = `${userCategory.toLowerCase()}-perfume`; // Matches 'men-perfume', 'women-perfume', 'unisex-perfume'
+              query.category = `${userCategory.toLowerCase()}-perfume`; 
           }
           break;
 
-        // Specific sub-categories for Books
+        
         case 'scifi':
         case 'business':
         case 'mystery':
@@ -195,7 +195,7 @@ router.post("/fetchproduct/category", async (req, res) => {
           }
           break;
 
-        // Specific sub-categories for Jewelry
+        
         case 'necklace':
         case 'earrings':
         case 'rings':
@@ -207,7 +207,7 @@ router.post("/fetchproduct/category", async (req, res) => {
           break;
 
         default:
-          // If no specific filter, just use the base query
+          
           break;
       }
     }

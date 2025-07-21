@@ -6,11 +6,11 @@ const bcrypt = require('bcrypt');
 const { body, validationResult } = require('express-validator');
 const authUser = require('../middleware/authUser');
 const dotenv = require('dotenv');
-const { deleteAllUserData } = require('../controller/deleteUser'); // Assuming this path is correct
+const { deleteAllUserData } = require('../controller/deleteUser'); 
 dotenv.config()
 
 
-// create a user :post "/auth",!auth
+
 let success = false
 router.post('/register', [
     body('firstName', 'Enter a valid name').isLength({ min: 1 }),
@@ -23,25 +23,25 @@ router.post('/register', [
     if (!errors.isEmpty()) {
         return res.status(400).json({ error: errors.array() })
     }
-    const { firstName, lastName, email, phoneNumber, password, isAdmin } = req.body // Added isAdmin here
+    const { firstName, lastName, email, phoneNumber, password, isAdmin } = req.body 
     try {
         let user = await User.findOne({ $or: [{ email: email }, { phoneNumber: phoneNumber }] });
         if (user) {
             return res.status(400).send({ error: "Sorry a user already exists" })
         }
 
-        // password hashing
+        
         const salt = await bcrypt.genSalt(10)
         const secPass = await bcrypt.hash(password, salt)
 
-        // create a new user
+        
         user = await User.create({
             firstName,
             lastName,
             email,
             phoneNumber,
             password: secPass,
-            isAdmin // Pass isAdmin to the user creation
+            isAdmin 
         })
         const data = {
             user: {
@@ -53,13 +53,13 @@ router.post('/register', [
         res.send({ success, authToken })
     }
     catch (error) {
-        console.error("Error during user registration:", error.message); // Added logging
+        console.error("Error during user registration:", error.message); 
         res.status(500).send("Internal server error")
     }
 })
 
 
-// login Route
+
 router.post('/login', [
     body('email', 'Enter a valid email').isEmail(),
     body('password', 'Password cannot be blank').exists(),
@@ -91,39 +91,39 @@ router.post('/login', [
         res.send({ success, authToken })
     }
     catch (error) {
-        console.error("Error during user login:", error.message); // Added logging
+        console.error("Error during user login:", error.message); 
         res.status(500).send("Internal server error002")
     }
 }
 );
 
-// logged in user details
+
 router.get('/getuser', authUser, async (req, res) => {
     try {
         const user = await User.findById(req.user.id).select("-password")
-        if (!user) { // Added check if user is found
+        if (!user) { 
             return res.status(404).send("User Not Found");
         }
         success = true
         res.send(user)
-        // console.log(user.city); // Removed console.log for user.city as it's not needed in production
+        
 
 
     } catch (error) {
-        console.error("Error fetching user details:", error.message); // Added logging
-        res.status(500).send("Internal server error") // Changed from 400 to 500 for server error
+        console.error("Error fetching user details:", error.message); 
+        res.status(500).send("Internal server error") 
     }
 }
 )
 
 
-// update user details
+
 router.put('/updateuser', authUser, async (req, res) => {
-    // Corrected: Destructure fields directly from req.body
+    
     const { firstName, lastName, email, phoneNumber, address, zipCode, city, userState } = req.body;
 
     try {
-        // Create an object with only the fields that were provided in the request body
+        
         const updatedFields = {};
         if (firstName !== undefined) { updatedFields.firstName = firstName; }
         if (lastName !== undefined) { updatedFields.lastName = lastName; }
@@ -134,20 +134,20 @@ router.put('/updateuser', authUser, async (req, res) => {
         if (city !== undefined) { updatedFields.city = city; }
         if (userState !== undefined) { updatedFields.userState = userState; }
 
-        // Find the user by ID from the auth token
+        
         let user = await User.findById(req.user.id);
         if (!user) {
             return res.status(404).send("User Not Found");
         }
 
-        // Update the user document
+        
         user = await User.findByIdAndUpdate(req.user.id, { $set: updatedFields }, { new: true });
         success = true;
-        res.status(200).json({ success, user }); // Send back the updated user object
+        res.status(200).json({ success, user }); 
 
     } catch (error) {
-        console.error("Error updating user details:", error.message); // Added logging
-        // More specific error handling for validation errors
+        console.error("Error updating user details:", error.message); 
+        
         if (error.name === 'ValidationError') {
             const errors = Object.values(error.errors).map(err => err.message);
             return res.status(400).json({ success: false, error: errors });
@@ -156,6 +156,6 @@ router.put('/updateuser', authUser, async (req, res) => {
     }
 })
 
-// delete user and user data
+
 router.delete('/delete/user/:userId', authUser, deleteAllUserData)
 module.exports = router
