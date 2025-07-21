@@ -208,7 +208,7 @@ const paymentVerification = async (req, res) => {
               <p class="thanks">Thank you for choosing ARISTAYA. If you have any questions or concerns, please don't hesitate to contact us.</p>
               <div class="signature">
                 <p>Best regards,</p>
-                <p><a href="${process.env.FRONTEND_URL}" target="_blank">https://aristaya-frontend-ecommerce.vercel.app</a></p>
+                <p><a href="${process.env.FRONTEND_URL_1}" target="_blank">https://aristaya-frontend-ecommerce.vercel.app</a></p>
               </div>
             </div>
           </body>
