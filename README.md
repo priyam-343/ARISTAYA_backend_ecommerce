@@ -1,53 +1,82 @@
-## Live Link
+ARISTAYA E-commerce Backend
+This is the backend API for the ARISTAYA E-commerce Platform.
 
-You can access the live application at [https://e-ARISTAYA.vercel.app/](https://e-ARISTAYA.vercel.app/).
+Features
+User Management (Authentication, Authorization with JWT)
 
-# MERN-E-Commerce-Backend
+Product Management (CRUD operations)
 
-MERN-E-Commerce-Backend is the backend of an e-commerce web application built with MongoDB, NodeJS, and ExpressJS.
+Order Processing & History
 
-The frontend of the application is built with ReactJS, Material UI, React-router-dom,ContextAPI. The source code for the frontend can be found at [https://github.com/Saurabh-8585/MERN-E-Commerce-Frontend](https://github.com/Saurabh-8585/MERN-E-Commerce-Frontend).
+Admin Dashboard Data APIs
 
-## Features
+Payment Gateway Integration (Razorpay)
 
-- User authentication and authorization(JWT)
-- Admin dashboard for managing products, orders, users and to show statistics
-- Payemnt Gateway
-- Mail Service
-- Forgot Password & Reset Password
-- Product listing and search
-- Product details and reviews
-- Cart management
-- Order history
+Mail Service
 
-## Tech Stack
+Forgot & Reset Password
 
-- ReactJS
-- MongoDB
-- NodeJS
-- ExpressJS
+Cart & Wishlist Management
 
-## Images
+Product Reviews
 
-![Dashboard](https://res.cloudinary.com/dxguqzge7/image/upload/v1682853694/Stat1_asehhd.png)
-![Dashboard](https://res.cloudinary.com/dxguqzge7/image/upload/v1682853694/Stat2_tw25cm.png)
-![Dashboard](https://res.cloudinary.com/dxguqzge7/image/upload/v1682956688/Stat3_rslfzi.png)
-![Orders](https://res.cloudinary.com/dxguqzge7/image/upload/v1682956689/Orders_cyfzkp.png)
-![Users](https://res.cloudinary.com/dxguqzge7/image/upload/v1682956689/Users_nxx1cs.png)
-![HomePage](https://res.cloudinary.com/dxguqzge7/image/upload/v1682853694/Home_bcr44v.png)
-![Products](https://res.cloudinary.com/dxguqzge7/image/upload/v1682853695/Products_vxf8pr.png)
-![Product](https://res.cloudinary.com/dxguqzge7/image/upload/v1682853694/Product_tnba6w.png)
-![Payment](https://res.cloudinary.com/dxguqzge7/image/upload/v1682853693/Payment_xrucd9.png)
-![Cart](https://res.cloudinary.com/dxguqzge7/image/upload/v1682853693/Cart_zpzmwr.png)
-![UserProfile](https://res.cloudinary.com/dxguqzge7/image/upload/v1682853694/User_lyfday.png)
+Tech Stack
+NodeJS
 
-## Tech Stack
+ExpressJS
 
-- ReactJS
-- MongoDB
-- NodeJS
-- ExpressJS
+MongoDB (Mongoose)
 
-## License
+JWT
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for more information.
+Razorpay
+
+Nodemailer
+
+Frontend Counterpart
+This backend supports the ARISTAYA E-commerce Frontend application.
+
+Frontend Repository: https://github.com/priyam-343/ARISTAYA_frontend_ecommerce.git
+
+How to Run Locally
+1. Prerequisites
+Node.js & npm (or Yarn)
+
+MongoDB instance (local or Atlas)
+
+2. Installation
+Clone this repository:
+
+git clone https://github.com/priyam-343/ARISTAYA_backend_ecommerce.git
+cd ARISTAYA_backend_ecommerce
+
+Install dependencies:
+
+npm install
+
+3. Environment Variables
+Create a .env file in the project root.
+
+.env Example:
+
+PORT=2000
+MONGO_URL=your_mongodb_atlas_connection_string
+JWT_SECRET=your_jwt_secret_key
+RAZORPAY_API_KEY=your_razorpay_api_key
+RAZORPAY_API_SECRET=your_razorpay_api_secret
+EMAIL=your_email@example.com
+EMAIL_PASSWORD=your_email_password
+FORGOT_PASSWORD=http://localhost:3000/user/reset
+PAYMENT_SUCCESS=http://localhost:3000/paymentsuccess
+ADMIN_KEY=your_admin_secret_key
+FRONTEND_URL=http://localhost:3000
+
+4. Run Server
+npm start
+
+Server runs on http://localhost:2000 (or specified port).
+
+License
+This project is licensed under the MIT License. See the LICENSE file for more information.
+
+Developed by Priyam Kumar
