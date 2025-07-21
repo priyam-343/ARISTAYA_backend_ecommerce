@@ -4,7 +4,7 @@ const Payment = require('../models/Payment');
 const Cart = require('../models/Cart');
 const nodemailer = require('nodemailer');
 const dotenv = require('dotenv');
-const pdf = require('html-pdf'); // ADDED: Import html-pdf library
+const pdf = require('html-pdf'); 
 dotenv.config();
 
 
@@ -37,8 +37,8 @@ const checkout = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Error during checkout:", error); // Added logging
-    res.status(500).send("Internal Server Error during checkout"); // More specific error response
+    console.error("Error during checkout:", error); 
+    res.status(500).send("Internal Server Error during checkout"); 
   }
 };
 
@@ -56,10 +56,7 @@ const paymentVerification = async (req, res) => {
 
   try {
     if (isAuthentic) {
-      // --- START PDF GENERATION & EMAIL ATTACHMENT LOGIC (NEW ADDITION) ---
-
-      // Define the HTML content for the PDF receipt (can be the same as email HTML)
-      // This HTML is designed to be self-contained for PDF generation
+    
       const receiptHtml = `<!DOCTYPE html>
         <html>
           <head>
@@ -211,7 +208,7 @@ const paymentVerification = async (req, res) => {
               <p class="thanks">Thank you for choosing ARISTAYA. If you have any questions or concerns, please don't hesitate to contact us.</p>
               <div class="signature">
                 <p>Best regards,</p>
-                <p><a href="${process.env.FRONTEND_URL}" target="_blank">ARISTAYA.com</a></p>
+                <p><a href="${process.env.FRONTEND_URL}" target="_blank">https://aristaya-frontend-ecommerce.vercel.app</a></p>
               </div>
             </div>
           </body>
@@ -233,11 +230,11 @@ const paymentVerification = async (req, res) => {
 
       let pdfBuffer;
       try {
-        // Generate PDF to a buffer
+        
         pdfBuffer = await new Promise((resolve, reject) => {
           pdf.create(receiptHtml, pdfOptions).toBuffer((err, buffer) => {
             if (err) {
-              console.error("Error creating PDF:", err); // Log PDF creation error
+              console.error("Error creating PDF:", err); 
               return reject(err);
             }
             resolve(buffer);
@@ -245,11 +242,11 @@ const paymentVerification = async (req, res) => {
         });
       } catch (pdfError) {
         console.error("Failed to generate PDF for email attachment (continuing without attachment):", pdfError);
-        // If PDF generation fails, set buffer to null so email still sends without attachment
+        
         pdfBuffer = null; 
       }
 
-      // Nodemailer transport setup (your existing code)
+      
       const transport = nodemailer.createTransport({
         service: "gmail",
         host: "smtp.gmail.email",
@@ -260,22 +257,22 @@ const paymentVerification = async (req, res) => {
         },
       })
 
-      // Nodemailer mail options (modified to include attachment)
+      
       const mailOptions = {
         from: process.env.EMAIL,
         to: userData.userEmail,
-        subject: `ARISTAYA Order Confirmation - Order ID: ${razorpay_order_id}`, // More descriptive subject
-        html: receiptHtml, // Use the same HTML for email body
-        attachments: pdfBuffer ? [ // Only attach if pdfBuffer was successfully created
+        subject: `ARISTAYA Order Confirmation - Order ID: ${razorpay_order_id}`, 
+        html: receiptHtml, 
+        attachments: pdfBuffer ? [ 
           {
             filename: `ARISTAYA_Receipt_${razorpay_payment_id}.pdf`,
             content: pdfBuffer,
             contentType: 'application/pdf'
           }
-        ] : [] // If no PDF buffer, send no attachments
+        ] : [] 
       };
 
-      // Send the email
+      
       transport.sendMail(mailOptions, (error, info) => {
         if (error) {
           console.error("Error sending email:", error);
@@ -283,10 +280,7 @@ const paymentVerification = async (req, res) => {
           console.log("Email sent: " + info.response);
         }
       });
-      // --- END PDF GENERATION & EMAIL ATTACHMENT LOGIC ---
-
-
-      // Your existing database operations (UNCHANGED)
+      
       await Payment.create({
         razorpay_order_id,
         razorpay_payment_id,
@@ -296,49 +290,45 @@ const paymentVerification = async (req, res) => {
         userData,
         totalAmount
       });
-      const deleteCart = await Cart.deleteMany({ user: userInfo }) // Ensure userInfo is the correct user ID
+      const deleteCart = await Cart.deleteMany({ user: userInfo }) 
 
-      // Your existing redirection (UNCHANGED)
       res.redirect(`${process.env.PAYMENT_SUCCESS}?paymentId=${razorpay_payment_id}`);
     }
     else {
       res.status(400).json({
         success: false,
-        message: "Payment verification failed." // Added message for clarity
+        message: "Payment verification failed." 
       });
     }
   }
   catch (error) {
-    console.error("Error during payment verification:", error); // Added logging
-    res.status(500).send("Internal Server Error during payment verification"); // More specific error response
+    console.error("Error during payment verification:", error); 
+    res.status(500).send("Internal Server Error during payment verification"); 
   }
 }
 
-// NEW FUNCTION: To fetch payment details by paymentId (UNCHANGED from previous step)
 const getPaymentDetails = async (req, res) => {
     try {
-        const { paymentId } = req.params; // Get paymentId from URL parameters
+        const { paymentId } = req.params; 
 
-        // Find the payment record using razorpay_payment_id
-        // Populate product details if productData stores only IDs and you need full product objects
+      
         const paymentRecord = await Payment.findOne({ razorpay_payment_id: paymentId })
             .populate({
-                path: 'productData.productId', // Path to populate
-                select: 'name price images' // Select only necessary fields to avoid sending too much data
+                path: 'productData.productId', 
+                select: 'name price images' 
             }); 
 
         if (!paymentRecord) {
             return res.status(404).json({ success: false, message: 'Payment details not found.' });
         }
 
-        // Return the necessary data
         res.status(200).json({
             success: true,
             paymentDetails: {
                 productData: paymentRecord.productData,
                 totalAmount: paymentRecord.totalAmount,
-                shippingCoast: 100, // Assuming fixed shipping cost, or fetch from record if stored
-                userData: paymentRecord.userData, // Include user data if needed on frontend
+                shippingCoast: 100, 
+                userData: paymentRecord.userData, 
                 razorpay_order_id: paymentRecord.razorpay_order_id,
                 razorpay_payment_id: paymentRecord.razorpay_payment_id
             }
@@ -351,4 +341,4 @@ const getPaymentDetails = async (req, res) => {
 };
 
 
-module.exports = { checkout, paymentVerification, getPaymentDetails } // Export the new function
+module.exports = { checkout, paymentVerification, getPaymentDetails } 
