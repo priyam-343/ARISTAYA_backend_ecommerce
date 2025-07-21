@@ -12,8 +12,8 @@ const connectToMongo = async () => {
         console.log(error);
     }
 
-    // const f = await User.find();
-    // console.log(f);
+    
+    
 }
 
 module.exports = connectToMongo;

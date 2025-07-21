@@ -10,12 +10,12 @@ const cart = require('./routes/cart')
 const wishlist = require('./routes/wishlist')
 const product = require('./routes/product')
 const review = require('./routes/review')
-const paymentRoute = require('./routes/paymentRoute') // This is your paymentRoutes.js
+const paymentRoute = require('./routes/paymentRoute') 
 const forgotPassword = require('./routes/forgotPassword')
 const AdminRoute = require('./routes/Admin/AdminAuth')
-// const dotenv = require('dotenv'); // REMOVED: Already called at the top
+
 const checkOrigin = require('./middleware/apiAuth');
-// dotenv.config() // REMOVED: Already called at the top
+
 
 connectToMongo();
 
@@ -45,8 +45,8 @@ app.use('/api/review', review)
 
 app.use('/api/admin', AdminRoute)
 
-// FIX IS HERE: Change the mount path for paymentRoute
-app.use('/api/payment', paymentRoute) // CHANGED from '/api' to '/api/payment'
+
+app.use('/api/payment', paymentRoute) 
 
 app.use('/api/password', forgotPassword)
 

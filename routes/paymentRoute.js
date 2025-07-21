@@ -1,5 +1,5 @@
 const express = require('express');
-const { checkout, paymentVerification, getPaymentDetails } = require('../controller/paymentController'); // ADDED getPaymentDetails here
+const { checkout, paymentVerification, getPaymentDetails } = require('../controller/paymentController'); 
 const router = express.Router()
 const Payment = require('../models/Payment')
 const User = require('../models/User')
@@ -11,8 +11,8 @@ router.route('/checkout').post(checkout)
 router.route('/paymentverification').post(paymentVerification)
 router.route('/getkey').get((req, res) => res.status(200).json({ key: process.env.RAZORPAY_API_KEY }))
 
-// NEW ROUTE: To fetch payment details by paymentId
-router.get('/getpaymentdetails/:paymentId', getPaymentDetails); // ADDED this route
+
+router.get('/getpaymentdetails/:paymentId', getPaymentDetails); 
 
 router.get('/getPreviousOrders', authUser, async (req, res) => {
   try {

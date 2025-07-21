@@ -3,11 +3,11 @@ const router = express.Router();
 const Cart = require("../models/Cart");
 const authUser = require("../middleware/authUser");
 
-// get all cart products
+
 router.get("/fetchcart", authUser, async (req, res) => {
     try {
         const cart = await Cart.find({ user: req.user.id })
-            // CRITICAL CHANGE HERE: Added 'numOfReviews' to the select string
+            
             .populate("productId", "name price images rating numOfReviews type") 
             .populate("user", "firstName lastName email"); 
         res.send(cart);
@@ -17,18 +17,18 @@ router.get("/fetchcart", authUser, async (req, res) => {
     }
 });
 
-// add to cart
+
 router.post("/addcart", authUser, async (req, res) => {
     try {
-        const { _id, quantity } = req.body; // _id here is productId
+        const { _id, quantity } = req.body; 
         const findProduct = await Cart.findOne({ $and: [{ productId: _id }, { user: req.user.id }] })
         if (findProduct) {
             return res.status(400).json({ msg: "Product already in a cart" })
         }
         else {
             const cart = new Cart({
-                user: req.user.id, // User ID from authUser middleware
-                productId: _id, // Product ID
+                user: req.user.id, 
+                productId: _id, 
                 quantity,
             });
             const savedCart = await cart.save();
@@ -40,9 +40,9 @@ router.post("/addcart", authUser, async (req, res) => {
     }
 });
 
-// remove from cart
+
 router.delete("/deletecart/:id", authUser, async (req, res) => {
-    const cartItemId = req.params.id; // This 'id' should be the _id of the cart document
+    const cartItemId = req.params.id; 
     try {
         let cartItem = await Cart.findById(cartItemId);
 
