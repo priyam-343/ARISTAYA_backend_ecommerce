@@ -89,7 +89,10 @@ const paymentVerification = async (req, res) => {
 
   try {
     // CRITICAL FIX: Retrieve stored order details using razorpay_order_id
-    const paymentRecord = await Payment.findOne({ razorpay_order_id: razorpay_order_id });
+    const paymentRecord = await Payment.findOne({ razorpay_order_id: razorpay_order_id }).populate({
+                                      path: 'productData.productId',
+                                      select: 'name price'
+                                  });
 
     if (!paymentRecord) {
         throw new ApiError(404, "Payment record not found for this order ID.");
@@ -260,7 +263,7 @@ const paymentVerification = async (req, res) => {
               <p class="thanks">Thank you for choosing ARISTAYA. If you have any questions or concerns, please don't hesitate to contact us.</p>
               <div class="signature">
                 <p>Best regards,</p>
-                <p><a href="${process.env.FRONTEND_URL_1}" target="_blank">https://aristaya-frontend-ecommerce.vercel.app</a></p>
+                <p><a href="${process.env.FRONTEND_URL_1}" target="_blank">https://aristaya.vercel.app</a></p>
               </div>
             </div>
           </body>
