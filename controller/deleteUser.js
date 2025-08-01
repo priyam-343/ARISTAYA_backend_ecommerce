@@ -2,24 +2,32 @@ const User = require("../models/User");
 const Cart = require("../models/Cart");
 const Wishlist = require("../models/Wishlist");
 const Review = require("../models/Review");
+const { ApiError } = require('../utils/apiError');
+const { sendErrorResponse } = require('../utils/errorMiddleware');
 
 const deleteAllUserData = async (req, res) => {
-    const { userId } = req.params;
-    const findUser = await User.findById(userId)
-    if (findUser) {
-        try {
-            const deleteUser = await User.findByIdAndDelete(userId);
-            const deleteCart = await Cart.deleteMany({ user: userId });
-            const deleteWishlist = await Wishlist.deleteMany({ user: userId });
-            const deleteReview = await Review.deleteMany({ user: userId });
-            res.send("delete successfully")
-        } catch (error) {
-            res.send("Something went wrong")
-        }
-    }
-    else {
-        res.status(400).send("User Not Found")
-    }
+    // The user's ID is securely obtained from the auth token via req.user.id
+    const userId = req.user.id;
 
-}
-module.exports = { deleteAllUserData }
+    try {
+        const findUser = await User.findById(userId);
+        if (!findUser) {
+            throw new ApiError(404, "User not found.");
+        }
+
+        // Use Promise.all to delete all user data concurrently for better performance.
+        await Promise.all([
+            User.findByIdAndDelete(userId),
+            Cart.deleteMany({ user: userId }),
+            Wishlist.deleteMany({ user: userId }),
+            Review.deleteMany({ user: userId })
+        ]);
+
+        res.status(200).json({ success: true, message: "Account and all associated data deleted successfully." });
+
+    } catch (error) {
+        sendErrorResponse(res, error, "Something went wrong while deleting user data.");
+    }
+};
+
+module.exports = { deleteAllUserData };

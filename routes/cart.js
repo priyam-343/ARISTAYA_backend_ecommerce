@@ -2,64 +2,72 @@ const express = require("express");
 const router = express.Router();
 const Cart = require("../models/Cart");
 const authUser = require("../middleware/authUser");
-
+const { ApiError } = require('../utils/apiError');
+const { sendErrorResponse } = require('../utils/errorMiddleware');
+const mongoose = require('mongoose'); // For ObjectId validation
 
 router.get("/fetchcart", authUser, async (req, res) => {
     try {
         const cart = await Cart.find({ user: req.user.id })
-            
-            .populate("productId", "name price images rating numOfReviews type") 
-            .populate("user", "firstName lastName email"); 
-        res.send(cart);
+            .populate("productId", "name price images rating numOfReviews type")
+            .populate("user", "firstName lastName email");
+        res.status(200).json({ success: true, cart });
     } catch (error) {
-        console.error("Error fetching cart:", error.message);
-        res.status(500).send("Internal server error while fetching cart");
+        sendErrorResponse(res, error, "Internal server error while fetching cart.");
     }
 });
-
 
 router.post("/addcart", authUser, async (req, res) => {
     try {
-        const { _id, quantity } = req.body; 
-        const findProduct = await Cart.findOne({ $and: [{ productId: _id }, { user: req.user.id }] })
-        if (findProduct) {
-            return res.status(400).json({ msg: "Product already in a cart" })
+        const { _id, quantity } = req.body;
+
+        if (!mongoose.Types.ObjectId.isValid(_id)) {
+            throw new ApiError(400, "Invalid product ID format.");
         }
-        else {
+        if (typeof quantity !== 'number' || quantity < 1) {
+            throw new ApiError(400, "Quantity must be a positive number.");
+        }
+
+        const findProduct = await Cart.findOne({ $and: [{ productId: _id }, { user: req.user.id }] });
+        if (findProduct) {
+            throw new ApiError(400, "Product already in cart.");
+        } else {
             const cart = new Cart({
-                user: req.user.id, 
-                productId: _id, 
+                user: req.user.id,
+                productId: _id,
                 quantity,
             });
             const savedCart = await cart.save();
-            res.status(200).json({ success: true, savedCart });
+            res.status(201).json({ success: true, savedCart, message: "Product added to cart successfully." });
         }
     } catch (error) {
-        console.error("Error adding to cart:", error.message);
-        res.status(500).send("Internal server error while adding to cart");
+        sendErrorResponse(res, error, "Internal server error while adding to cart.");
     }
 });
 
-
 router.delete("/deletecart/:id", authUser, async (req, res) => {
-    const cartItemId = req.params.id; 
+    const cartItemId = req.params.id;
     try {
+        if (!mongoose.Types.ObjectId.isValid(cartItemId)) {
+            throw new ApiError(400, "Invalid cart item ID format.");
+        }
+
         let cartItem = await Cart.findById(cartItemId);
 
         if (!cartItem) {
-            return res.status(404).json({ success: false, message: "Cart item not found." });
+            throw new ApiError(404, "Cart item not found.");
         }
 
+        // Ensure the user is authorized to delete this specific cart item
         if (cartItem.user.toString() !== req.user.id) {
-            return res.status(401).json({ success: false, message: "Not authorized to delete this cart item." });
+            throw new ApiError(403, "Not authorized to delete this cart item.");
         }
 
         const deletedItem = await Cart.findByIdAndDelete(cartItemId);
         res.status(200).json({ success: true, message: "Cart item deleted successfully.", deletedItem });
 
     } catch (error) {
-        console.error("Error deleting cart item:", error.message);
-        res.status(500).send("Internal server error while deleting cart item");
+        sendErrorResponse(res, error, "Internal server error while deleting cart item.");
     }
 });
 

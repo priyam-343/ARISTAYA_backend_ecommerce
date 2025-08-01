@@ -11,7 +11,7 @@ const UserSchema = new Schema({
         required: true
     },
     phoneNumber: {
-        type: Number,
+        type: Number, // Consider changing to String if you need to store leading zeros or non-numeric characters
         required: true,
         unique: true,
     },

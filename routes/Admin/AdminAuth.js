@@ -6,97 +6,110 @@ const bcrypt = require('bcrypt');
 const authAdmin = require("../../middleware/authAdmin");
 const { body, validationResult } = require('express-validator');
 const dotenv = require('dotenv');
-const { getAllUsersInfo, getSingleUserInfo, getUserCart, getUserWishlist, getUserReview, deleteUserReview, deleteUserCartItem, deleteUserWishlistItem, updateProductDetails, userPaymentDetails, addProduct, deleteProduct } = require('../../controller/AdminControl');
+const { ApiError } = require('../../utils/apiError');
+const { sendErrorResponse } = require('../../utils/errorMiddleware');
+
+const {
+    getAllUsersInfo, getSingleUserInfo, getUserCart, getUserWishlist,
+    getUserReview, deleteUserReview, deleteUserCartItem, deleteUserWishlistItem,
+    updateProductDetails, userPaymentDetails, addProduct, deleteProduct,
+    deleteUserAccount
+} = require('../../controller/AdminControl');
+
 const { chartData } = require('../../controller/AllProductInfo');
-dotenv.config()
+dotenv.config();
 
+const adminKey = process.env.ADMIN_KEY;
 
-let success = false
-let adminKey = process.env.ADMIN_KEY
+// --- Admin Data Retrieval Routes (Protected by authAdmin) ---
 router.get('/getusers', authAdmin, getAllUsersInfo);
-router.get('/geteuser/:userId', authAdmin, getSingleUserInfo);
+router.get('/getuser/:userId', authAdmin, getSingleUserInfo);
 router.get('/getcart/:userId', authAdmin, getUserCart);
 router.get('/getwishlist/:userId', authAdmin, getUserWishlist);
 router.get('/getreview/:userId', authAdmin, getUserReview);
 router.get('/getorder/:id', authAdmin, userPaymentDetails);
-router.get('/chartdata', chartData);
+router.get('/chartdata', authAdmin, chartData);
 
+// --- Admin Login Route ---
 router.post('/login', [
     body('email', 'Enter a valid email').isEmail(),
     body('password', 'Password cannot be blank').exists(),
-
 ], async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(400).json({ error: errors.array() })
+        const errorMessages = errors.array().map(err => err.msg).join(', ');
+        return sendErrorResponse(res, new ApiError(400, `Validation failed: ${errorMessages}`));
     }
 
     const { email, password, key } = req.body;
     try {
         let user = await User.findOne({ email });
-        if (user && user.isAdmin == true && key == adminKey) {
 
-            const passComp = await bcrypt.compare(password, user.password)
-            if (!passComp) {
-                return res.status(400).send({ success, error: "Please try to login with correct credentials" })
-            }
-
-            const data = {
-                user: {
-                    id: user._id
-                }
-            }
-
-            const authToken = jwt.sign(data, process.env.JWT_SECRET)
-            success = true
-            res.send({ success, authToken })
+        if (!user || user.isAdmin !== true || key !== adminKey) {
+            throw new ApiError(400, "Invalid credentials or you are not authorized as an Admin.");
         }
 
-        else {
-            success = false
-            return res.status(400).send({ success, error: "Invalid User" })
+        const passComp = await bcrypt.compare(password, user.password);
+        if (!passComp) {
+            throw new ApiError(400, "Invalid credentials.");
         }
 
+        const tokenPayload = {
+            user: {
+                id: user._id,
+                isAdmin: user.isAdmin
+            }
+        };
+
+        const authToken = jwt.sign(tokenPayload, process.env.JWT_SECRET);
+
+        res.status(200).json({
+            success: true,
+            authToken,
+            user: {
+                _id: user._id,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                email: user.email,
+                phoneNumber: user.phoneNumber,
+                isAdmin: user.isAdmin,
+            },
+            message: "Admin logged in successfully."
+        });
+
+    } catch (error) {
+        sendErrorResponse(res, error, "Internal server error during admin login.");
     }
-    catch (error) {
-        success = false
-        res.status(500).send("Internal server error002")
-    }
-}
-);
+});
+
+// --- Admin Register Route ---
 router.post('/register', [
-
-    body('firstName', 'Enter a valid name').isLength({ min: 3 }),
-    body('lastName', 'Enter a valid name').isLength({ min: 3 }),
+    body('firstName', 'First name must be at least 3 characters').isLength({ min: 3 }),
+    body('lastName', 'Last name must be at least 3 characters').isLength({ min: 3 }),
     body('email', 'Enter a valid email').isEmail(),
     body('password', 'Password must be at least 5 characters').isLength({ min: 5 }),
     body('phoneNumber', 'Enter a valid phone number').isLength({ min: 10, max: 10 })
-
-
 ], async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-
-        return res.status(400).json({ error: errors.array() })
+        const errorMessages = errors.array().map(err => err.msg).join(', ');
+        return sendErrorResponse(res, new ApiError(400, `Validation failed: ${errorMessages}`));
     }
-    const { firstName, lastName, email, phoneNumber, password, key } = req.body
+    const { firstName, lastName, email, phoneNumber, password, key } = req.body;
 
     try {
         let user = await User.findOne({ $or: [{ email: email }, { phoneNumber: phoneNumber }] });
         if (user) {
-            success = false
-            return res.status(400).send({success, error: "Sorry a user already exists" })
+            throw new ApiError(400, "A user with this email or phone number already exists.");
         }
 
         if (key !== adminKey) {
-            success = false
-            return res.status(400).send({ success, error: "Invalid User" })
+            throw new ApiError(403, "Invalid Admin Key. You cannot register as an admin.");
         }
-        
-        const salt = await bcrypt.genSalt(10)
-        const secPass = await bcrypt.hash(password, salt)
 
-        
+        const salt = await bcrypt.genSalt(10);
+        const secPass = await bcrypt.hash(password, salt);
+
         user = await User.create({
             firstName,
             lastName,
@@ -104,32 +117,45 @@ router.post('/register', [
             phoneNumber,
             password: secPass,
             isAdmin: true
-        })
-        const data = {
+        });
+
+        const tokenPayload = {
             user: {
-                id: user.id
+                id: user._id,
+                isAdmin: user.isAdmin
             }
-        }
-        success = true
-        const authToken = jwt.sign(data, process.env.JWT_SECRET)
-        res.send({ success, authToken })
+        };
+
+        const authToken = jwt.sign(tokenPayload, process.env.JWT_SECRET);
+
+        res.status(201).json({
+            success: true,
+            authToken,
+            user: {
+                _id: user._id,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                email: user.email,
+                phoneNumber: user.phoneNumber,
+                isAdmin: user.isAdmin,
+            },
+            message: "Admin registered successfully."
+        });
+
+    } catch (error) {
+        sendErrorResponse(res, error, "Internal server error during admin registration.");
     }
-    catch (error) {
-        res.status(500).send("Internal server error")
-    }
-})
+});
+
+// --- Admin Product/Review/Cart/Wishlist Management Routes (Protected by authAdmin) ---
 router.post('/addproduct', authAdmin, addProduct);
-
-
-
-router.put('/updateproduct/:id', authAdmin, updateProductDetails)
-
-
-
+router.put('/updateproduct/:id', authAdmin, updateProductDetails);
 router.delete('/review/:id', authAdmin, deleteUserReview);
 router.delete('/usercart/:id', authAdmin, deleteUserCartItem);
 router.delete('/userwishlist/:id', authAdmin, deleteUserWishlistItem);
 router.delete('/deleteproduct/:id', authAdmin, deleteProduct);
 
+// --- Admin User Account Management ---
+router.delete('/deleteuser/:id', authAdmin, deleteUserAccount);
 
-module.exports = router
+module.exports = router;

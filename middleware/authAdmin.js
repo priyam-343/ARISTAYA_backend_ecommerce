@@ -1,30 +1,43 @@
 const jwt = require("jsonwebtoken");
 const dotenv = require('dotenv');
-const User = require('../models/User.js')
-dotenv.config()
+const User = require('../models/User.js');
+const { ApiError } = require('../utils/apiError'); // Import ApiError
+const { sendErrorResponse } = require('../utils/errorMiddleware'); // Import sendErrorResponse
+dotenv.config();
 
-const checkAdmin = async (req, res, next) => {
-    // get the user from the jwt token and id to req objectPosition: 
+const authAdmin = async (req, res, next) => { // Renamed function to authAdmin
     const token = req.header('Authorization');
+
     if (!token) {
-        return res.status(401).send("Access denied")
+        return sendErrorResponse(res, new ApiError(401, "Access denied: No token provided."));
     }
+
     try {
-        const data = jwt.verify(token, process.env.JWT_SECRET)
-        req.user = data.user
-        const checkAdmin = await User.findById(req.user.id)
-        if (checkAdmin.isAdmin == true) {
-            next()
+        const data = jwt.verify(token, process.env.JWT_SECRET);
+        req.user = data.user; // Assuming JWT payload has a 'user' object with 'id'
+
+        // Fetch user from DB to ensure isAdmin status is current and not just from token
+        const user = await User.findById(req.user.id);
+
+        if (!user) {
+            return sendErrorResponse(res, new ApiError(404, "User not found."));
         }
-        else {
-            res.status(401).send("Access denied")
+
+        if (user.isAdmin === true) {
+            next(); // User is an admin, proceed
+        } else {
+            return sendErrorResponse(res, new ApiError(403, "Access denied: Not an administrator."));
         }
     } catch (error) {
-        res.status(401).send("Access denied")
-
+        // Handle specific JWT errors
+        if (error.name === 'TokenExpiredError') {
+            return sendErrorResponse(res, new ApiError(401, "Access denied: Token expired."));
+        }
+        if (error.name === 'JsonWebTokenError') {
+            return sendErrorResponse(res, new ApiError(401, "Access denied: Invalid token."));
+        }
+        sendErrorResponse(res, new ApiError(401, "Access denied."));
     }
+};
 
-
-}
-
-module.exports = checkAdmin
+module.exports = authAdmin; // Updated module.exports to authAdmin

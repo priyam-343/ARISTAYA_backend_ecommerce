@@ -1,229 +1,92 @@
 const express = require("express");
 const router = express.Router();
 const Product = require("../models/Product");
-const authUser = require("../middleware/authUser");
+const { ApiError } = require('../utils/apiError');
+const { sendErrorResponse } = require('../utils/errorMiddleware');
+const mongoose = require('mongoose'); // For ObjectId validation
 
+// --- API Routes ---
 
+// Fetch all products
 router.get("/fetchproduct", async (req, res) => {
-  try {
-    const products = await Product.find({});
-    res.json(products);
-  } catch (error) {
-    console.error("Error fetching all products:", error.message);
-    res.status(500).send("Internal server error while fetching all products");
-  }
+    try {
+        const products = await Product.find({});
+        res.status(200).json({ success: true, products });
+    } catch (error) {
+        sendErrorResponse(res, error, "Internal server error while fetching products.");
+    }
 });
 
-
+// Fetch a single product by its ID
 router.get("/fetchproduct/:id", async (req, res) => {
-  try {
-    const productId = req.params.id;
-    console.log(`[Backend Debug] Received request for single product ID: ${productId}`);
+    try {
+        const productId = req.params.id;
+        if (!mongoose.Types.ObjectId.isValid(productId)) {
+            throw new ApiError(400, "Invalid product ID format.");
+        }
 
-    const product = await Product.findById(productId);
-
-    if (!product) {
-      console.log(`[Backend Debug] Product with ID ${productId} not found.`);
-      return res.status(404).json({ success: false, message: "Product not found." });
+        const product = await Product.findById(productId);
+        if (!product) {
+            throw new ApiError(404, "Product not found.");
+        }
+        res.status(200).json({ success: true, product });
+    } catch (error) {
+        sendErrorResponse(res, error, "Internal server error while fetching product.");
     }
-
-    console.log(`[Backend Debug] Found product: ${product.name}`);
-    res.json(product);
-  } catch (error) {
-    console.error(`Error fetching single product with ID ${req.params.id}:`, error.message);
-    if (error.name === 'CastError') {
-      return res.status(400).json({ success: false, message: "Invalid product ID format." });
-    }
-    res.status(500).send("Internal server error while fetching single product");
-  }
 });
 
-
-
+// REFACTORED: This route now fetches products based on the 'mainCategory'.
+// Frontend sends a request here when a user clicks on a main category like "Men's Wear".
+// CONSIDER: Changing this to a GET request with query parameters for RESTfulness: /api/product/type?mainCategory=men-wear
 router.post("/fetchproduct/type", async (req, res) => {
-  try {
-    const { userType } = req.body; 
-
-    console.log(`[Backend Debug] Received userType for /fetchproduct/type: ${userType}`);
-
-    let query = {}; 
-
-    
-    if (userType === 'men-wear') {
-      
-      query = { type: 'apparel', $or: [{ category: 'men-cloths' }, { category: 'men-accessories' }] };
-    } else if (userType === 'women-wear') {
-      
-      query = { type: 'apparel', $or: [{ category: 'women-cloths' }, { category: 'women-accessories' }] };
-    } else if (userType === 'children-wear') {
-      
-      query = { type: 'apparel', category: 'kids-cloths' };
-    } else if (userType === 'shoe') {
-      query = { type: 'shoe' };
-    } else if (userType === 'perfumes') {
-      query = { type: 'fragrance' }; 
-    } else if (userType === 'book') {
-      query = { type: 'book' };
-    } else if (userType === 'jewelry') {
-      query = { type: 'jewelry' };
-    } else {
-      
-      query = { $or: [{ category: userType }, { type: userType }] };
+    try {
+        const { userType } = req.body; // 'userType' now corresponds to 'mainCategory' (e.g., "men-wear")
+        if (!userType || typeof userType !== 'string' || userType.trim() === '') {
+            throw new ApiError(400, "Main category (userType) is required.");
+        }
+        const products = await Product.find({ mainCategory: userType });
+        res.status(200).json({ success: true, products });
+    } catch (error) {
+        sendErrorResponse(res, error, "Internal server error while fetching products by type.");
     }
-
-    console.log(`[Backend Debug] Constructed MongoDB query for /fetchproduct/type: ${JSON.stringify(query)}`);
-
-    const products = await Product.find(query);
-
-    console.log(`[Backend Debug] Found ${products.length} products for userType: ${userType}`);
-
-    res.json(products);
-  } catch (error) {
-    console.error("Error fetching products by type:", error.message);
-    res.status(500).send("Internal server error while fetching products by type");
-  }
 });
 
-
+// REFACTORED: This route now handles both sub-category filtering and sorting.
+// Frontend sends a request here when a user selects an option from the filter dropdown.
+// CONSIDER: Changing this to a GET request with query parameters for RESTfulness: /api/product/category?mainCategory=men-wear&filter=t-shirts&sort=pricehightolow
 router.post("/fetchproduct/category", async (req, res) => {
-  try {
-    const { userType, userCategory } = req.body; 
+    try {
+        const { userType, userCategory } = req.body; // userType is mainCategory, userCategory is the filter option
 
-    console.log(`[Backend Debug] Received userType for /fetchproduct/category: ${userType}, userCategory: ${userCategory}`);
+        if (!userType || typeof userType !== 'string' || userType.trim() === '') {
+            throw new ApiError(400, "Main category (userType) is required.");
+        }
 
-    let query = {}; 
-    let sort = {}; 
+        let query = { mainCategory: userType };
+        let sort = {};
 
-    
-    if (userType === 'men-wear') {
-      query = { type: 'apparel', $or: [{ category: 'men-cloths' }, { category: 'men-accessories' }] };
-    } else if (userType === 'women-wear') {
-      query = { type: 'apparel', $or: [{ category: 'women-cloths' }, { category: 'women-accessories' }] };
-    } else if (userType === 'children-wear') {
-      query = { type: 'apparel', category: 'kids-cloths' };
-    } else if (userType === 'shoe') {
-      query = { type: 'shoe' };
-    } else if (userType === 'perfumes') {
-      query = { type: 'fragrance' };
-    } else if (userType === 'book') {
-      query = { type: 'book' };
-    } else if (userType === 'jewelry') {
-      query = { type: 'jewelry' };
-    } else {
-      query = { $or: [{ category: userType }, { type: userType }] };
-    }
+        if (userCategory && typeof userCategory === 'string' && userCategory.toLowerCase() !== 'all') {
+            const filter = userCategory.toLowerCase();
 
-    
-    if (userCategory && userCategory.toLowerCase() !== 'all') {
-      switch (userCategory.toLowerCase()) {
-        
-        case 'pricelowtohigh':
-          sort = { price: 1 }; 
-          break;
-        case 'pricehightolow':
-          sort = { price: -1 }; 
-          break;
-        
-        case 'highrated':
-          sort = { rating: -1 }; 
-          break;
-        case 'lowrated':
-          sort = { rating: 1 }; 
-          break;
+            const sortOptions = {
+                'pricelowtohigh': { price: 1 },
+                'pricehightolow': { price: -1 },
+                'highrated': { rating: -1 },
+                'lowrated': { rating: 1 }
+            };
 
-        
-        case 't-shirts':
-        case 'jeans':
-        case 'formalwear':
-          if (userType === 'men-wear') {
-              query.category = 'men-cloths';
-              query.name = new RegExp(userCategory.replace('-', ' '), 'i'); 
-          }
-          break;
-        case 'dresses':
-        case 'tops':
-        case 'skirts':
-          if (userType === 'women-wear') {
-              query.category = 'women-cloths';
-              query.name = new RegExp(userCategory, 'i');
-          }
-          break;
-        case 'boys':
-        case 'girls':
-        case 'infants':
-          if (userType === 'children-wear') {
-              query.category = 'kids-cloths';
-              query.name = new RegExp(userCategory, 'i');
-          }
-          break;
-        case 'accessories': 
-            if (userType === 'men-wear') {
-                query.category = 'men-accessories';
-            } else if (userType === 'women-wear') {
-                query.category = 'women-accessories';
+            if (sortOptions[filter]) {
+                sort = sortOptions[filter];
+            } else {
+                query.subCategory = filter;
             }
-            break;
+        }
 
-        
-        case 'running':
-        case 'football':
-        case 'formal':
-        case 'casual':
-          if (userType === 'shoe') {
-              query.category = userCategory.toLowerCase();
-          }
-          break;
-
-        
-        case 'men':
-        case 'women':
-        case 'unisex':
-          if (userType === 'perfumes') {
-              query.category = `${userCategory.toLowerCase()}-perfume`; 
-          }
-          break;
-
-        
-        case 'scifi':
-        case 'business':
-        case 'mystery':
-        case 'cookbooks':
-        case 'fiction':
-        case 'self-help':
-          if (userType === 'book') {
-              query.category = userCategory.toLowerCase();
-          }
-          break;
-
-        
-        case 'necklace':
-        case 'earrings':
-        case 'rings':
-        case 'bracelet':
-        case 'watches':
-          if (userType === 'jewelry') {
-              query.category = userCategory.toLowerCase();
-          }
-          break;
-
-        default:
-          
-          break;
-      }
+        const products = await Product.find(query).sort(sort);
+        res.status(200).json({ success: true, products });
+    } catch (error) {
+        sendErrorResponse(res, error, "Internal server error while fetching products by category.");
     }
-
-    console.log(`[Backend Debug] Constructed MongoDB query for /fetchproduct/category: ${JSON.stringify(query)}`);
-    console.log(`[Backend Debug] Constructed MongoDB sort for /fetchproduct/category: ${JSON.stringify(sort)}`);
-
-    const products = await Product.find(query).sort(sort);
-
-    console.log(`[Backend Debug] Found ${products.length} products for userType: ${userType}, userCategory: ${userCategory}`);
-
-    res.json(products);
-  } catch (error) {
-    console.error("Error fetching products by category (sub-filter):", error.message);
-    res.status(500).send("Internal server error while fetching products by category");
-  }
 });
 
 module.exports = router;
