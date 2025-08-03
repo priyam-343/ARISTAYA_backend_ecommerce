@@ -14,11 +14,10 @@ const paymentRoute = require('./routes/paymentRoute');
 const forgotPassword = require('./routes/forgotPassword');
 const AdminRoute = require('./routes/Admin/AdminAuth');
 
-// Import custom middleware
-const checkOrigin = require('./middleware/apiAuth');
+// We are no longer using the custom checkOrigin middleware.
+// const checkOrigin = require('./middleware/apiAuth'); // <-- This is commented out.
 
 // Import custom error handling utility
-// NOTE: You will need to create these files in a 'utils' folder.
 const { ApiError } = require('./utils/apiError');
 const { sendErrorResponse } = require('./utils/errorMiddleware');
 
@@ -30,20 +29,38 @@ const port = process.env.PORT || 2000;
 const app = express();
 
 // --- Core Middleware ---
-// Built-in Express middleware for parsing JSON and URL-encoded data
-app.use(express.json()); // Parses incoming requests with JSON payloads
-app.use(express.urlencoded({ extended: true })); // Parses incoming requests with URL-encoded payloads
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// CORS middleware - configure for production
-app.use(cors());
+//
+// --------------------------------------------------------------------
+// ** Corrected and Explicit CORS middleware. **
+// This handles all CORS-related headers and pre-flight requests.
+// --------------------------------------------------------------------
+//
+const allowedOrigins = [
+  'https://aristaya.vercel.app', // Your Vercel frontend URL
+  'http://localhost:3000',      // Your local frontend URL
+];
 
-// Serve static files from the 'build' directory (for frontend)
-// This assumes your frontend build output is placed in a 'build' folder
-// at the root of your backend project.
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
+  credentials: true, // This is crucial for handling cookies and sessions
+}));
+
+// Serve static files from the 'build' directory
 app.use(express.static(path.join(__dirname, 'build')));
 
-// Custom origin check middleware
-app.use(checkOrigin);
+// ** The conflicting custom middleware has been removed from here. **
+// app.use(checkOrigin);
 
 // --- API Routes ---
 app.use('/api/auth', auth);
@@ -56,11 +73,7 @@ app.use('/api/payment', paymentRoute);
 app.use('/api/password', forgotPassword);
 
 // --- Global Error Handling Middleware ---
-// This middleware should be placed after all routes and other middleware.
-// It catches any errors thrown by route handlers or other middleware.
 app.use((err, req, res, next) => {
-    // Use the standardized error response utility
-    // The default message is for unhandled errors that are not ApiError instances
     sendErrorResponse(res, err, "An unexpected server error occurred.");
 });
 
