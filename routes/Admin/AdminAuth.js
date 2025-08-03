@@ -24,7 +24,7 @@ const adminKey = process.env.ADMIN_KEY;
 const backendUrl = process.env.BACKEND_URL;
 const frontendUrl = process.env.FRONTEND_URL_1;
 
-// --- Admin Data Retrieval Routes (Protected by authAdmin) ---
+
 router.get('/getusers', authAdmin, getAllUsersInfo);
 router.get('/getuser/:userId', authAdmin, getSingleUserInfo);
 router.get('/getcart/:userId', authAdmin, getUserCart);
@@ -33,7 +33,7 @@ router.get('/getreview/:userId', authAdmin, getUserReview);
 router.get('/getorder/:id', authAdmin, userPaymentDetails);
 router.get('/chartdata', authAdmin, chartData);
 
-// --- Admin Login Route ---
+
 router.post('/login', [
     body('email', 'Enter a valid email').isEmail(),
     body('password', 'Password cannot be blank').exists(),
@@ -48,20 +48,20 @@ router.post('/login', [
     try {
         let user = await User.findOne({ email });
         
-        // Step 1: Check if the user is a valid admin and exists.
+        
         if (!user || user.isAdmin !== true) {
             console.log("Login attempt failed: User not found or is not an admin.");
             throw new ApiError(400, "Invalid credentials or you are not authorized as an Admin.");
         }
 
-        // Step 2: Check specifically if the admin account is pending approval.
-        // **CRITICAL FIX**: Use !user.isApproved for a robust check
+        
+        
         if (!user.isApproved) {
              console.log("Login attempt blocked: User is not approved.");
              throw new ApiError(403, "Your admin account is pending approval from a super-admin. Please wait for them to approve your request.");
         }
         
-        // Step 3: Check the password and admin key.
+        
         const passComp = await bcrypt.compare(password, user.password);
         if (!passComp) {
             console.log("Login attempt failed: Incorrect password.");
@@ -102,7 +102,7 @@ router.post('/login', [
     }
 });
 
-// --- Admin Register Route ---
+
 router.post('/register', [
     body('firstName', 'First name must be at least 3 characters').isLength({ min: 3 }),
     body('lastName', 'Last name must be at least 3 characters').isLength({ min: 3 }),
@@ -118,16 +118,16 @@ router.post('/register', [
     const { firstName, lastName, email, phoneNumber, password, key } = req.body;
 
     try {
-        // **CRITICAL FIX**: Convert the incoming phone number string to a Number
+        
         const phoneNumberAsNumber = Number(phoneNumber);
 
-        // Find a user by email or by the parsed phone number
+        
         let user = await User.findOne({ $or: [{ email: email }, { phoneNumber: phoneNumberAsNumber }] });
         
         if (user) {
-            // Check for a pre-existing user more specifically
+            
             if (user.email === email) {
-                // Check if the existing user is an unapproved admin
+                
                 if (user.isAdmin === true && user.isApproved === false) {
                      const approvalToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
                      const approvalLink = `${backendUrl}/api/admin/approve?token=${approvalToken}`;
@@ -148,16 +148,16 @@ router.post('/register', [
                          message: "An admin account with this email is already pending approval. We have resent the approval email."
                       });
                 }
-                // Check if the user is an already approved admin
+                
                 if (user.isAdmin === true && user.isApproved === true) {
                     throw new ApiError(400, "A user with this email is already an approved admin.");
                 }
-                // If not an admin, it's a regular user
+                
                 throw new ApiError(400, "The email you entered is already registered as a regular user.");
             }
             
-            // Now check for a pre-existing phone number
-            // The value from the database (user.phoneNumber) is a number, and now the incoming value (phoneNumberAsNumber) is also a number
+            
+            
             if (user.phoneNumber === phoneNumberAsNumber) {
                 throw new ApiError(400, "The phone number you entered is already in use.");
             }
@@ -170,7 +170,7 @@ router.post('/register', [
         const salt = await bcrypt.genSalt(10);
         const secPass = await bcrypt.hash(password, salt);
 
-        // CRITICAL FIX: Ensure the isApproved flag is explicitly set to false
+        
         user = await User.create({
             firstName,
             lastName,
@@ -210,7 +210,7 @@ router.post('/register', [
     }
 });
 
-// ** NEW ENDPOINT TO APPROVE ADMINS **
+
 router.get('/approve', async (req, res) => {
     const { token } = req.query;
     if (!token) {
@@ -273,7 +273,7 @@ router.get('/approve', async (req, res) => {
     }
 });
 
-// --- Admin Product/Review/Cart/Wishlist Management Routes (Protected by authAdmin) ---
+
 router.post('/addproduct', authAdmin, addProduct);
 router.put('/updateproduct/:id', authAdmin, updateProductDetails);
 router.delete('/review/:id', authAdmin, deleteUserReview);
@@ -281,7 +281,7 @@ router.delete('/usercart/:id', authAdmin, deleteUserCartItem);
 router.delete('/userwishlist/:id', authAdmin, deleteUserWishlistItem);
 router.delete('/deleteproduct/:id', authAdmin, deleteProduct);
 
-// --- Admin User Account Management ---
+
 router.delete('/deleteuser/:id', authAdmin, deleteUserAccount);
 
 module.exports = router;

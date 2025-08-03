@@ -5,17 +5,17 @@ const PaymentSchema = new Schema({
     razorpay_order_id: {
         type: String,
         required: true,
-        unique: true, // Ensure order IDs are unique
+        unique: true, 
     },
     razorpay_payment_id: {
         type: String,
-        // Not required initially, only after successful verification
+        
     },
     razorpay_signature: {
         type: String,
-        // Not required initially, only after successful verification
+        
     },
-    // CRITICAL FIX: Define schema for productData array elements
+    
     productData: [
         {
             productId: {
@@ -28,21 +28,21 @@ const PaymentSchema = new Schema({
                 required: true,
                 min: [1, 'Quantity must be at least 1'],
             },
-            // Optionally, store the price at the time of purchase here to prevent price changes affecting old orders
-            // priceAtPurchase: { type: Number, required: true },
+            
+            
         }
     ],
-    userData: { // Snapshot of user details at time of purchase
+    userData: { 
         firstName: { type: String, required: true },
         lastName: { type: String, required: true },
         userEmail: { type: String, required: true },
-        phoneNumber: { type: String }, // Changed to String to handle leading zeros and formatting
+        phoneNumber: { type: String }, 
         address: { type: String },
         zipCode: { type: String },
         city: { type: String },
         userState: { type: String },
     },
-    user: { // The actual user ID linked to the payment
+    user: { 
         type: mongoose.Schema.Types.ObjectId,
         ref: 'user',
         required: true,
@@ -54,13 +54,13 @@ const PaymentSchema = new Schema({
     },
     status: {
         type: String,
-        enum: ['pending', 'completed', 'failed'], // Define allowed statuses
+        enum: ['pending', 'completed', 'failed'], 
         default: 'pending',
     },
     paidAt: {
         type: Date,
         default: Date.now,
     },
-}, { timestamps: true }); // `timestamps: true` adds createdAt and updatedAt automatically
+}, { timestamps: true }); 
 
 module.exports = mongoose.model("payment", PaymentSchema);

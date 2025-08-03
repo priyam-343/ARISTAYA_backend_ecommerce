@@ -4,7 +4,7 @@ const Wishlist = require('../models/Wishlist');
 const authUser = require('../middleware/authUser');
 const { ApiError } = require('../utils/apiError');
 const { sendErrorResponse } = require('../utils/errorMiddleware');
-const mongoose = require('mongoose'); // For ObjectId validation
+const mongoose = require('mongoose'); 
 
 router.get('/fetchwishlist', authUser, async (req, res) => {
     try {
@@ -17,7 +17,7 @@ router.get('/fetchwishlist', authUser, async (req, res) => {
 
 router.post('/addwishlist', authUser, async (req, res) => {
     try {
-        const { _id } = req.body; // _id is productId
+        const { _id } = req.body; 
 
         if (!mongoose.Types.ObjectId.isValid(_id)) {
             throw new ApiError(400, "Invalid product ID format.");
@@ -37,7 +37,7 @@ router.post('/addwishlist', authUser, async (req, res) => {
 });
 
 router.delete('/deletewishlist/:id', authUser, async (req, res) => {
-    const { id } = req.params; // id is wishlist item ID
+    const { id } = req.params; 
     try {
         if (!mongoose.Types.ObjectId.isValid(id)) {
             throw new ApiError(400, "Invalid wishlist item ID format.");
@@ -48,7 +48,7 @@ router.delete('/deletewishlist/:id', authUser, async (req, res) => {
             throw new ApiError(404, "Wishlist item not found.");
         }
 
-        // Ensure the user is authorized to delete this specific wishlist item
+        
         if (wishlistItem.user.toString() !== req.user.id) {
             throw new ApiError(403, "Not authorized to delete this wishlist item.");
         }

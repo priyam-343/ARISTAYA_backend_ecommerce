@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
-// This is the new, simplified, and robust schema for your products.
+
 const ProductSchema = new Schema({
     name: {
         type: String,
@@ -15,6 +15,13 @@ const ProductSchema = new Schema({
         type: Number,
         required: [true, "Please enter a product price."],
         default: 0
+    },
+    
+    originalPrice: {
+        type: Number,
+        
+        
+        required: false
     },
     images: [
         {
@@ -49,12 +56,12 @@ const ProductSchema = new Schema({
         type: Number,
         default: 0
     },
-    // The 'author' field is only relevant for books. It is not required.
+    
     author: {
         type: String
     }
 }, {
-    // This automatically adds 'createdAt' and 'updatedAt' fields.
+    
     timestamps: true
 });
 

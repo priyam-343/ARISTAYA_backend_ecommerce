@@ -5,10 +5,9 @@ const Product = require('../models/Product');
 const authUser = require('../middleware/authUser');
 const { ApiError } = require('../utils/apiError');
 const { sendErrorResponse } = require('../utils/errorMiddleware');
-const { updateProductRating } = require('../utils/productRatingUtility'); // Import the utility
-const mongoose = require('mongoose'); // For ObjectId validation
+const { updateProductRating } = require('../utils/productRatingUtility');
+const mongoose = require('mongoose');
 
-// --- API Routes ---
 
 router.post('/fetchreview/:id', async (req, res) => {
     try {
@@ -19,13 +18,13 @@ router.post('/fetchreview/:id', async (req, res) => {
             throw new ApiError(400, "Invalid product ID format.");
         }
 
-        let sortQuery = { createdAt: -1 }; // Default to newest first
+        let sortQuery = { createdAt: -1 }; 
 
         switch (filterType) {
             case 'old': sortQuery = { createdAt: 1 }; break;
             case 'positivefirst': sortQuery = { rating: -1 }; break;
             case 'negativefirst': sortQuery = { rating: 1 }; break;
-            default: sortQuery = { createdAt: -1 }; // Fallback for invalid filterType
+            default: sortQuery = { createdAt: -1 }; 
         }
 
         const reviews = await Review.find({ productId }).populate("user", "firstName lastName").sort(sortQuery);
@@ -43,9 +42,30 @@ router.post('/fetchreview/:id', async (req, res) => {
     }
 });
 
+router.get('/user-reviews/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            throw new ApiError(400, "Invalid user ID format.");
+        }
+
+        const reviews = await Review.find({ user: userId }).populate('productId');
+
+        if (!reviews || reviews.length === 0) {
+            return res.status(404).json({ success: false, message: 'No reviews found for this user.' });
+        }
+
+        res.status(200).json({ success: true, reviews });
+
+    } catch (error) {
+        sendErrorResponse(res, error, "Internal Server Error while fetching user reviews.");
+    }
+});
+
 router.post('/addreview', authUser, async (req, res) => {
     try {
-        const { id, comment, rating } = req.body; // id is productId
+        const { id, comment, rating } = req.body; 
 
         if (!mongoose.Types.ObjectId.isValid(id)) {
             throw new ApiError(400, "Invalid product ID format.");
@@ -66,7 +86,6 @@ router.post('/addreview', authUser, async (req, res) => {
         let reviewData = new Review({ user: req.user.id, productId: id, comment, rating });
         await reviewData.save();
 
-        // FIX: Call the utility to update product rating
         await updateProductRating(id);
 
         reviewData = await reviewData.populate("user", "firstName lastName");
@@ -89,7 +108,6 @@ router.delete('/deletereview/:id', authUser, async (req, res) => {
             throw new ApiError(404, "Review not found.");
         }
 
-        // Ensure the user is authorized to delete this specific review
         if (review.user.toString() !== req.user.id) {
             throw new ApiError(403, "Not authorized to delete this review.");
         }
@@ -97,7 +115,6 @@ router.delete('/deletereview/:id', authUser, async (req, res) => {
         const productIdToUpdate = review.productId;
         await Review.findByIdAndDelete(reviewId);
 
-        // FIX: Call the utility to update product rating
         await updateProductRating(productIdToUpdate);
 
         res.status(200).json({ success: true, message: "Review deleted successfully." });
@@ -108,7 +125,7 @@ router.delete('/deletereview/:id', authUser, async (req, res) => {
 
 router.put('/editreview', authUser, async (req, res) => {
     try {
-        const { id, comment, rating } = req.body; // id is reviewId
+        const { id, comment, rating } = req.body; 
 
         if (!mongoose.Types.ObjectId.isValid(id)) {
             throw new ApiError(400, "Invalid review ID format.");
@@ -125,7 +142,6 @@ router.put('/editreview', authUser, async (req, res) => {
             throw new ApiError(404, "Review not found.");
         }
 
-        // Ensure the user is authorized to edit this specific review
         if (review.user.toString() !== req.user.id) {
             throw new ApiError(403, "Not authorized to edit this review.");
         }
@@ -134,7 +150,6 @@ router.put('/editreview', authUser, async (req, res) => {
         review.rating = rating;
         await review.save();
 
-        // FIX: Call the utility to update product rating
         await updateProductRating(review.productId);
 
         res.status(200).json({ success: true, message: "Review edited successfully." });

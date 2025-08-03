@@ -8,9 +8,9 @@ const mongoose = require('mongoose');
 
 const { ApiError } = require('../utils/apiError');
 const { sendErrorResponse } = require('../utils/errorMiddleware');
-const { updateProductRating } = require('../utils/productRatingUtility'); // Import the utility
+const { updateProductRating } = require('../utils/productRatingUtility'); 
 
-// Helper for consistent ID validation
+
 const validateObjectId = (id, idName = "ID") => {
     if (!id || !mongoose.Types.ObjectId.isValid(id)) {
         throw new ApiError(400, `Invalid or missing ${idName} format.`);
@@ -44,6 +44,7 @@ const getUserCart = async (req, res) => {
     const { userId } = req.params;
     try {
         validateObjectId(userId, "user ID");
+        
         const userCart = await Cart.find({ user: userId })
             .populate("productId", "name price images rating type numOfReviews mainCategory");
         res.status(200).json({ success: true, cartItems: userCart });
@@ -56,6 +57,7 @@ const getUserWishlist = async (req, res) => {
     const { userId } = req.params;
     try {
         validateObjectId(userId, "user ID");
+        
         const userWishlist = await Wishlist.find({ user: userId })
             .populate("productId", "name price images rating type numOfReviews mainCategory");
         res.status(200).json({ success: true, wishlistItems: userWishlist });
@@ -68,6 +70,7 @@ const getUserReview = async (req, res) => {
     const { userId } = req.params;
     try {
         validateObjectId(userId, "user ID");
+        
         const userReviews = await Review.find({ user: userId })
             .populate("productId", "name price images rating type numOfReviews mainCategory")
             .populate("user", "firstName lastName");
@@ -90,7 +93,7 @@ const deleteUserReview = async (req, res) => {
         const productIdToUpdate = review.productId;
         await Review.findByIdAndDelete(id);
 
-        await updateProductRating(productIdToUpdate); // Call the utility to update product rating
+        await updateProductRating(productIdToUpdate); 
 
         res.status(200).json({ success: true, message: "Review deleted successfully." });
     } catch (error) {
@@ -137,7 +140,7 @@ const updateProductDetails = async (req, res) => {
             throw new ApiError(400, "No product details provided for update.");
         }
 
-        // Validate and parse numerical fields
+        
         if (updateProduct.price !== undefined) {
             const price = parseFloat(updateProduct.price);
             if (isNaN(price) || price <= 0) {
@@ -145,9 +148,17 @@ const updateProductDetails = async (req, res) => {
             }
             updateProduct.price = price;
         }
+        
+        if (updateProduct.originalPrice !== undefined) {
+            const originalPrice = parseFloat(updateProduct.originalPrice);
+            if (isNaN(originalPrice) || originalPrice <= 0) {
+                throw new ApiError(400, "Original price must be a positive number.");
+            }
+            updateProduct.originalPrice = originalPrice;
+        }
         if (updateProduct.rating !== undefined) {
             const rating = parseFloat(updateProduct.rating);
-            if (isNaN(rating) || rating < 0 || rating > 5) { // Assuming rating is 0-5
+            if (isNaN(rating) || rating < 0 || rating > 5) { 
                 throw new ApiError(400, "Rating must be a number between 0 and 5.");
             }
             updateProduct.rating = rating;
@@ -177,6 +188,7 @@ const userPaymentDetails = async (req, res) => {
     const { id } = req.params;
     try {
         validateObjectId(id, "user ID");
+        
         const payments = await Payment.find({ user: id })
             .populate({
                 path: 'productData.productId',
@@ -191,10 +203,11 @@ const userPaymentDetails = async (req, res) => {
 };
 
 const addProduct = async (req, res) => {
-    const { name, brand, price, mainCategory, subCategory, images, rating, author, description, stock } = req.body;
+    
+    const { name, brand, price, originalPrice, mainCategory, subCategory, images, rating, author, description, stock } = req.body;
 
     try {
-        // Basic input validation
+        
         if (!name || !price || !mainCategory || !images || !description || stock === undefined) {
             throw new ApiError(400, "Missing required product fields: name, price, mainCategory, images, description, stock.");
         }
@@ -203,6 +216,10 @@ const addProduct = async (req, res) => {
         }
         if (typeof price !== 'number' || price <= 0) {
             throw new ApiError(400, "Price must be a positive number.");
+        }
+        
+        if (originalPrice !== undefined && (typeof originalPrice !== 'number' || originalPrice <= 0)) {
+            throw new ApiError(400, "Original price must be a positive number if provided.");
         }
         if (!Array.isArray(images) || images.length === 0 || !images.every(img => typeof img === 'object' && img !== null && typeof img.url === 'string' && img.url.trim() !== '')) {
             throw new ApiError(400, "Images must be a non-empty array of objects with 'url' strings.");
@@ -218,6 +235,7 @@ const addProduct = async (req, res) => {
             name,
             brand,
             price,
+            originalPrice, // --- NEW: Add originalPrice to the creation object ---
             mainCategory,
             subCategory,
             images,
@@ -257,7 +275,7 @@ const deleteUserAccount = async (req, res) => {
             throw new ApiError(404, "User not found.");
         }
 
-        // IMPORTANT: Delete ALL associated data for the user being deleted
+        
         await Promise.all([
             User.findByIdAndDelete(id),
             Cart.deleteMany({ user: id }),

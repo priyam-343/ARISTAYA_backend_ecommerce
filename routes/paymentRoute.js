@@ -10,35 +10,35 @@ const { ApiError } = require('../utils/apiError');
 const { sendErrorResponse } = require('../utils/errorMiddleware');
 dotenv.config();
 
-// Route for initiating checkout
+
 router.route('/checkout').post(checkout);
 
-// Route for payment verification (Razorpay callback)
+
 router.route('/paymentverification').post(paymentVerification);
 
-// Route to get Razorpay API key (for frontend)
+
 router.route('/getkey').get((req, res) => res.status(200).json({ success: true, key: process.env.RAZORPAY_API_KEY }));
 
-// Route to get details of a specific payment by ID
+
 router.get('/getpaymentdetails/:paymentId', getPaymentDetails);
 
-// Route to get all previous orders for the authenticated user
+
 router.get('/getPreviousOrders', authUser, async (req, res) => {
   try {
-    // CRITICAL FIX: Change `userId` to `user` to match the PaymentSchema field name
-    const orders = await Payment.find({ user: req.user.id }) // Find orders for the authenticated user using the 'user' field
+    
+    const orders = await Payment.find({ user: req.user.id }) 
       .populate({
-        path: 'productData.productId', // Path to the productId field within productData array
-        model: 'product',             // Use 'product' to match your schema definition
-        select: 'name images price mainCategory subCategory' // Select only necessary fields
+        path: 'productData.productId', 
+        model: 'product',             
+        select: 'name images price mainCategory subCategory' 
       })
-      // CRITICAL FIX: Populate the `user` field, not `userId`, to get user details for the shipping address
+      
       .populate('user', 'firstName lastName email address city userState zipCode')
-      .sort({ createdAt: -1 }); // Sort by newest orders first
+      .sort({ createdAt: -1 }); 
 
     res.status(200).json({ success: true, orders: orders, message: "Previous orders fetched successfully." });
   } catch (error) {
-    console.error("Error fetching previous orders:", error); // Log the detailed error
+    console.error("Error fetching previous orders:", error); 
     sendErrorResponse(res, error, "Something went wrong while fetching previous orders.");
   }
 });

@@ -1,11 +1,11 @@
 const jwt = require("jsonwebtoken");
 const dotenv = require('dotenv');
 const User = require('../models/User.js');
-const { ApiError } = require('../utils/apiError'); // Import ApiError
-const { sendErrorResponse } = require('../utils/errorMiddleware'); // Import sendErrorResponse
+const { ApiError } = require('../utils/apiError'); 
+const { sendErrorResponse } = require('../utils/errorMiddleware'); 
 dotenv.config();
 
-const authAdmin = async (req, res, next) => { // Renamed function to authAdmin
+const authAdmin = async (req, res, next) => { 
     const token = req.header('Authorization');
 
     if (!token) {
@@ -14,9 +14,9 @@ const authAdmin = async (req, res, next) => { // Renamed function to authAdmin
 
     try {
         const data = jwt.verify(token, process.env.JWT_SECRET);
-        req.user = data.user; // Assuming JWT payload has a 'user' object with 'id'
+        req.user = data.user; 
 
-        // Fetch user from DB to ensure isAdmin status is current and not just from token
+        
         const user = await User.findById(req.user.id);
 
         if (!user) {
@@ -24,12 +24,12 @@ const authAdmin = async (req, res, next) => { // Renamed function to authAdmin
         }
 
         if (user.isAdmin === true) {
-            next(); // User is an admin, proceed
+            next(); 
         } else {
             return sendErrorResponse(res, new ApiError(403, "Access denied: Not an administrator."));
         }
     } catch (error) {
-        // Handle specific JWT errors
+        
         if (error.name === 'TokenExpiredError') {
             return sendErrorResponse(res, new ApiError(401, "Access denied: Token expired."));
         }
@@ -40,4 +40,4 @@ const authAdmin = async (req, res, next) => { // Renamed function to authAdmin
     }
 };
 
-module.exports = authAdmin; // Updated module.exports to authAdmin
+module.exports = authAdmin; 

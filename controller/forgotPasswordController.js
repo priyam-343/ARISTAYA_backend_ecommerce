@@ -7,7 +7,7 @@ const { ApiError } = require('../utils/apiError');
 const { sendErrorResponse } = require('../utils/errorMiddleware');
 dotenv.config();
 
-// --- Reusable Nodemailer Transport ---
+
 const transport = nodemailer.createTransport({
     service: "gmail",
     auth: {
@@ -16,7 +16,7 @@ const transport = nodemailer.createTransport({
     },
 });
 
-// --- ARISTAYA Themed Email Template ---
+
 const createAristayaEmail = (title, preheader, content, buttonLink, buttonText) => {
     return `
     <!DOCTYPE html>
@@ -77,18 +77,18 @@ const sendEmailLink = async (req, res) => {
 
         const findUser = await User.findOne({ email });
         if (!findUser) {
-            // Send a generic success message even if user not found to prevent email enumeration
+            
             return res.status(200).json({ success: true, message: "If a user with that email exists, a password reset link has been sent." });
         }
         
-        // ** FIX: Block password reset for Google-signed-in users **
-        // We check for the existence of the password hash.
+        
+        
         if (!findUser.password) {
             return sendErrorResponse(res, new ApiError(400, "This account was created with Google and does not have a password. Please sign in with Google."));
         }
 
         const secretKey = findUser._id + process.env.JWT_SECRET;
-        const token = jwt.sign({ userID: findUser._id }, secretKey, { expiresIn: '15m' }); // Token expires in 15 minutes
+        const token = jwt.sign({ userID: findUser._id }, secretKey, { expiresIn: '15m' }); 
         const link = `${process.env.FORGOT_PASSWORD}/${findUser._id}/${token}`;
 
         const mailOptions = {
@@ -129,13 +129,13 @@ const setNewPassword = async (req, res) => {
             throw new ApiError(404, "User not found.");
         }
 
-        // ** FIX: Block password creation for Google-signed-in users **
+        
         if (!findUser.password) {
              throw new ApiError(400, "This account was created with Google and does not have a password. You cannot create one this way.");
         }
 
         const secretKey = findUser._id + process.env.JWT_SECRET;
-        jwt.verify(token, secretKey); // This will throw an error if the token is invalid or expired
+        jwt.verify(token, secretKey); 
 
         const salt = await bcrypt.genSalt(10);
         const hashedPass = await bcrypt.hash(newPassword, salt);
@@ -155,7 +155,7 @@ const setNewPassword = async (req, res) => {
     }
 };
 
-// This function is for changing the password when the user is already logged in.
+
 const resetPassword = async (req, res) => {
     const { currentPassword, newPassword } = req.body;
     try {
@@ -163,12 +163,12 @@ const resetPassword = async (req, res) => {
             throw new ApiError(400, "New password is required and must be at least 5 characters.");
         }
 
-        const findUser = await User.findById(req.user.id).select('+password'); // Select password field
+        const findUser = await User.findById(req.user.id).select('+password'); 
         if (!findUser) {
             throw new ApiError(404, "User not found.");
         }
 
-        // ** FIX: Block password change for Google-signed-in users **
+        
         if (!findUser.password) {
             throw new ApiError(400, "This account was signed up via Google and has no password to change.");
         }

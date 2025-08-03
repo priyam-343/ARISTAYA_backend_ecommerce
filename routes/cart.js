@@ -4,7 +4,7 @@ const Cart = require("../models/Cart");
 const authUser = require("../middleware/authUser");
 const { ApiError } = require('../utils/apiError');
 const { sendErrorResponse } = require('../utils/errorMiddleware');
-const mongoose = require('mongoose'); // For ObjectId validation
+const mongoose = require('mongoose'); 
 
 router.get("/fetchcart", authUser, async (req, res) => {
     try {
@@ -58,7 +58,7 @@ router.delete("/deletecart/:id", authUser, async (req, res) => {
             throw new ApiError(404, "Cart item not found.");
         }
 
-        // Ensure the user is authorized to delete this specific cart item
+        
         if (cartItem.user.toString() !== req.user.id) {
             throw new ApiError(403, "Not authorized to delete this cart item.");
         }

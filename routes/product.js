@@ -3,11 +3,113 @@ const router = express.Router();
 const Product = require("../models/Product");
 const { ApiError } = require('../utils/apiError');
 const { sendErrorResponse } = require('../utils/errorMiddleware');
-const mongoose = require('mongoose'); // For ObjectId validation
+const mongoose = require('mongoose'); 
 
-// --- API Routes ---
 
-// Fetch all products
+
+
+
+router.post('/addproduct', async (req, res, next) => {
+    try {
+        const {
+            name,
+            description,
+            price,
+            originalPrice, 
+            images,
+            mainCategory,
+            subCategory,
+            stock,
+            brand,
+            author
+        } = req.body;
+
+        
+        const newProduct = new Product({
+            name,
+            description,
+            price,
+            originalPrice, 
+            images,
+            mainCategory,
+            subCategory,
+            stock,
+            brand,
+            author
+        });
+
+        const savedProduct = await newProduct.save();
+
+        if (!savedProduct) {
+            throw new ApiError(500, "Product could not be saved.");
+        }
+
+        res.status(201).json({
+            success: true,
+            message: "Product added successfully.",
+            product: savedProduct
+        });
+
+    } catch (error) {
+        next(new ApiError(500, error.message || "An error occurred while adding the product."));
+    }
+});
+
+
+
+
+router.put('/updateproduct/:id', async (req, res, next) => {
+    const { id } = req.params;
+    try {
+        const {
+            name,
+            description,
+            price,
+            originalPrice, 
+            images,
+            mainCategory,
+            subCategory,
+            stock,
+            brand,
+            author
+        } = req.body;
+
+        const updateData = {
+            name,
+            description,
+            price,
+            originalPrice, 
+            images,
+            mainCategory,
+            subCategory,
+            stock,
+            brand,
+            author
+        };
+
+        const updatedProduct = await Product.findByIdAndUpdate(
+            id,
+            { $set: updateData },
+            { new: true, runValidators: true }
+        );
+
+        if (!updatedProduct) {
+            throw new ApiError(404, "Product not found.");
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Product updated successfully.",
+            product: updatedProduct
+        });
+
+    } catch (error) {
+        next(new ApiError(500, error.message || "An error occurred while updating the product."));
+    }
+});
+
+
+
 router.get("/fetchproduct", async (req, res) => {
     try {
         const products = await Product.find({});
@@ -17,7 +119,7 @@ router.get("/fetchproduct", async (req, res) => {
     }
 });
 
-// Fetch a single product by its ID
+
 router.get("/fetchproduct/:id", async (req, res) => {
     try {
         const productId = req.params.id;
@@ -35,12 +137,12 @@ router.get("/fetchproduct/:id", async (req, res) => {
     }
 });
 
-// REFACTORED: This route now fetches products based on the 'mainCategory'.
-// Frontend sends a request here when a user clicks on a main category like "Men's Wear".
-// CONSIDER: Changing this to a GET request with query parameters for RESTfulness: /api/product/type?mainCategory=men-wear
+
+
+
 router.post("/fetchproduct/type", async (req, res) => {
     try {
-        const { userType } = req.body; // 'userType' now corresponds to 'mainCategory' (e.g., "men-wear")
+        const { userType } = req.body; 
         if (!userType || typeof userType !== 'string' || userType.trim() === '') {
             throw new ApiError(400, "Main category (userType) is required.");
         }

@@ -9,7 +9,7 @@ dotenv.config();
 
 const { ApiError } = require('../utils/apiError');
 const { sendErrorResponse } = require('../utils/errorMiddleware');
-const mongoose = require('mongoose'); // Needed for ObjectId validation
+const mongoose = require('mongoose'); 
 
 const instance = new Razorpay({
   key_id: process.env.RAZORPAY_API_KEY,
@@ -20,7 +20,7 @@ const checkout = async (req, res) => {
   try {
     const { amount, userId, productDetails, userDetails } = req.body;
 
-    // Validate incoming data
+    
     if (!amount || !userId || !productDetails || !userDetails) {
         throw new ApiError(400, "Missing crucial data for checkout: amount, userId, productDetails, userDetails.");
     }
@@ -38,31 +38,31 @@ const checkout = async (req, res) => {
     if (!Array.isArray(parsedProductDetails) || parsedProductDetails.length === 0) {
         throw new ApiError(400, "Product details must be a non-empty array.");
     }
-    // Basic check for userDetails structure
+    
     if (typeof parsedUserDetails !== 'object' || parsedUserDetails === null || !parsedUserDetails.userEmail) {
         throw new ApiError(400, "Invalid user details provided (missing email or not an object).");
     }
 
     const options = {
-      amount: totalAmount * 100, // Amount in smallest currency unit (paise for INR)
+      amount: totalAmount * 100, 
       currency: "INR",
     };
     const order = await instance.orders.create(options);
 
-    // CRITICAL FIX: Store order details in your database with a 'pending' status
+    
     const newPaymentRecord = await Payment.create({
-        razorpay_order_id: order.id, // Store the Razorpay order ID
+        razorpay_order_id: order.id, 
         user: userId,
         productData: parsedProductDetails,
         userData: parsedUserDetails,
         totalAmount: totalAmount,
-        status: 'pending' // Initial status
+        status: 'pending' 
     });
 
     res.status(200).json({
       success: true,
       order,
-      // You might want to return the newPaymentRecord._id here if needed by frontend
+      
     });
 
   } catch (error) {
@@ -73,7 +73,7 @@ const checkout = async (req, res) => {
 const paymentVerification = async (req, res) => {
   const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
 
-  // Basic validation for Razorpay parameters
+  
   if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
       return sendErrorResponse(res, new ApiError(400, "Missing Razorpay verification parameters."));
   }
@@ -88,7 +88,7 @@ const paymentVerification = async (req, res) => {
   const isAuthentic = expectedSignature === razorpay_signature;
 
   try {
-    // CRITICAL FIX: Retrieve stored order details using razorpay_order_id
+    
     const paymentRecord = await Payment.findOne({ razorpay_order_id: razorpay_order_id }).populate({
                                       path: 'productData.productId',
                                       select: 'name price'
@@ -98,7 +98,7 @@ const paymentVerification = async (req, res) => {
         throw new ApiError(404, "Payment record not found for this order ID.");
     }
 
-    // Extract data from the retrieved paymentRecord
+    
     const userInfo = paymentRecord.user;
     const productInfo = paymentRecord.productData;
     const userData = paymentRecord.userData;
@@ -106,11 +106,11 @@ const paymentVerification = async (req, res) => {
 
 
     if (isAuthentic) {
-      // Update the payment record with successful details and status
+      
       paymentRecord.razorpay_payment_id = razorpay_payment_id;
       paymentRecord.razorpay_signature = razorpay_signature;
-      paymentRecord.status = 'completed'; // Mark as completed
-      await paymentRecord.save(); // Save the updated record
+      paymentRecord.status = 'completed'; 
+      await paymentRecord.save(); 
 
       const receiptHtml = `<!DOCTYPE html>
         <html>
@@ -335,13 +335,13 @@ const paymentVerification = async (req, res) => {
         }
       });
 
-      // Delete cart items after successful payment
+      
       const deleteCart = await Cart.deleteMany({ user: userInfo });
 
       res.redirect(`${process.env.PAYMENT_SUCCESS}?paymentId=${razorpay_payment_id}`);
     }
     else {
-      // If signature is not authentic, update payment record status to 'failed'
+      
       paymentRecord.status = 'failed';
       await paymentRecord.save();
       sendErrorResponse(res, new ApiError(400, "Payment verification failed: Signature mismatch."));
@@ -378,7 +378,7 @@ const getPaymentDetails = async (req, res) => {
                 userData: paymentRecord.userData,
                 razorpay_order_id: paymentRecord.razorpay_order_id,
                 razorpay_payment_id: paymentRecord.razorpay_payment_id,
-                status: paymentRecord.status // Include status in response
+                status: paymentRecord.status 
             }
         });
 

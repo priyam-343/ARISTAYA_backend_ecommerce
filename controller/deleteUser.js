@@ -6,7 +6,7 @@ const { ApiError } = require('../utils/apiError');
 const { sendErrorResponse } = require('../utils/errorMiddleware');
 
 const deleteAllUserData = async (req, res) => {
-    // The user's ID is securely obtained from the auth token via req.user.id
+    
     const userId = req.user.id;
 
     try {
@@ -15,7 +15,7 @@ const deleteAllUserData = async (req, res) => {
             throw new ApiError(404, "User not found.");
         }
 
-        // Use Promise.all to delete all user data concurrently for better performance.
+        
         await Promise.all([
             User.findByIdAndDelete(userId),
             Cart.deleteMany({ user: userId }),
