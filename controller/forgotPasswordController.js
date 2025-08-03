@@ -33,7 +33,15 @@ const createAristayaEmail = (title, preheader, content, buttonLink, buttonText) 
             .content { padding: 20px 40px; color: #cccccc; }
             .content p { margin-bottom: 20px; line-height: 1.6; }
             .button-container { text-align: center; padding: 20px 40px; }
-            .button { background-color: #FFD700; color: #000000; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-family: 'Cooper Black', serif; display: inline-block; }
+            .button { 
+                background-color: #FFD700; 
+                padding: 15px 30px; 
+                text-decoration: none; 
+                border-radius: 8px; 
+                font-weight: bold; 
+                font-family: 'Cooper Black', serif; 
+                display: inline-block; 
+            }
             .footer { padding: 20px; text-align: center; font-size: 12px; color: #888888; }
         </style>
     </head>
@@ -47,7 +55,8 @@ const createAristayaEmail = (title, preheader, content, buttonLink, buttonText) 
                 <p>${content}</p>
             </div>
             <div class="button-container">
-                <a href="${buttonLink}" class="button">${buttonText}</a>
+                <!-- Applied inline style to ensure the text color is black -->
+                <a href="${buttonLink}" class="button" style="color: #000000;">${buttonText}</a>
             </div>
             <div class="footer">
                 <p>If you did not request this, please ignore this email.</p>
@@ -71,6 +80,12 @@ const sendEmailLink = async (req, res) => {
             // Send a generic success message even if user not found to prevent email enumeration
             return res.status(200).json({ success: true, message: "If a user with that email exists, a password reset link has been sent." });
         }
+        
+        // ** FIX: Block password reset for Google-signed-in users **
+        // We check for the existence of the password hash.
+        if (!findUser.password) {
+            return sendErrorResponse(res, new ApiError(400, "This account was created with Google and does not have a password. Please sign in with Google."));
+        }
 
         const secretKey = findUser._id + process.env.JWT_SECRET;
         const token = jwt.sign({ userID: findUser._id }, secretKey, { expiresIn: '15m' }); // Token expires in 15 minutes
@@ -85,7 +100,7 @@ const sendEmailLink = async (req, res) => {
                 "Forgot your password?",
                 "If you've lost your password or wish to reset it, please click the button below. This link will expire in 15 minutes.",
                 link,
-                "Reset Your Password"
+                "RESET YOUR PASSWORD"
             )
         };
 
@@ -93,7 +108,11 @@ const sendEmailLink = async (req, res) => {
         res.status(200).json({ success: true, message: "Password reset link has been sent to your email." });
 
     } catch (error) {
-        sendErrorResponse(res, error, "Something went wrong. Please try again.");
+        if (error instanceof ApiError) {
+            sendErrorResponse(res, error);
+        } else {
+            sendErrorResponse(res, error, "Something went wrong. Please try again.");
+        }
     }
 };
 
@@ -110,6 +129,11 @@ const setNewPassword = async (req, res) => {
             throw new ApiError(404, "User not found.");
         }
 
+        // ** FIX: Block password creation for Google-signed-in users **
+        if (!findUser.password) {
+             throw new ApiError(400, "This account was created with Google and does not have a password. You cannot create one this way.");
+        }
+
         const secretKey = findUser._id + process.env.JWT_SECRET;
         jwt.verify(token, secretKey); // This will throw an error if the token is invalid or expired
 
@@ -123,7 +147,11 @@ const setNewPassword = async (req, res) => {
         if (error.name === 'TokenExpiredError' || error.name === 'JsonWebTokenError') {
             return sendErrorResponse(res, new ApiError(400, "Link has expired or is invalid. Please try again."));
         }
-        sendErrorResponse(res, error, "Something went wrong while setting new password.");
+        if (error instanceof ApiError) {
+            sendErrorResponse(res, error);
+        } else {
+            sendErrorResponse(res, error, "Something went wrong while setting new password.");
+        }
     }
 };
 
@@ -131,13 +159,22 @@ const setNewPassword = async (req, res) => {
 const resetPassword = async (req, res) => {
     const { currentPassword, newPassword } = req.body;
     try {
-        if (!currentPassword || !newPassword || newPassword.length < 5) {
-            throw new ApiError(400, "Both current and new passwords are required, and new password must be at least 5 characters.");
+        if (!newPassword || newPassword.length < 5) {
+            throw new ApiError(400, "New password is required and must be at least 5 characters.");
         }
 
-        const findUser = await User.findById(req.user.id);
+        const findUser = await User.findById(req.user.id).select('+password'); // Select password field
         if (!findUser) {
             throw new ApiError(404, "User not found.");
+        }
+
+        // ** FIX: Block password change for Google-signed-in users **
+        if (!findUser.password) {
+            throw new ApiError(400, "This account was signed up via Google and has no password to change.");
+        }
+
+        if (!currentPassword) {
+            throw new ApiError(400, "Current password is required to change your password.");
         }
 
         const passwordCompare = await bcrypt.compare(currentPassword, findUser.password);
@@ -152,7 +189,11 @@ const resetPassword = async (req, res) => {
         res.status(200).json({ success: true, message: "Password changed successfully." });
 
     } catch (error) {
-        sendErrorResponse(res, error, "Something went wrong while resetting password.");
+        if (error instanceof ApiError) {
+            sendErrorResponse(res, error);
+        } else {
+            sendErrorResponse(res, error, "Something went wrong while resetting password.");
+        }
     }
 };
 

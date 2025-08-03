@@ -8,12 +8,14 @@ const UserSchema = new Schema({
     },
     lastName: {
         type: String,
-        required: true
+        required: false
     },
     phoneNumber: {
-        type: Number, // Consider changing to String if you need to store leading zeros or non-numeric characters
-        required: true,
+        // Change `required` to `false` for social logins
+        type: Number,
+        required: false, // Changed from `true`
         unique: true,
+        sparse: true // Allows `null` values to be unique, preventing a new user with `phoneNumber: null` from failing
     },
     email: {
         type: String,
@@ -21,12 +23,27 @@ const UserSchema = new Schema({
         unique: true
     },
     password: {
+        // Change `required` to `false` for social logins
         type: String,
-        required: true
+        required: false // Changed from `true`
     },
-    isAdmin:{
-        default:false,
-        type:Boolean
+    isAdmin: {
+        default: false,
+        type: Boolean
+    },
+    isApproved: {
+        // **CRITICAL FIX:** This field must exist for admin approval logic.
+        type: Boolean,
+        default: false
+    },
+    profileImage: {
+        // **NEW FIELD** to store the user's Google profile picture
+        type: String,
+        required: false // Not required for non-social logins
+    },
+    isVerified: { // ** NEW FIELD for email verification **
+        type: Boolean,
+        default: false,
     },
     address: {
         type: String
@@ -40,6 +57,6 @@ const UserSchema = new Schema({
     userState: {
         type: String
     }
-
 }, { timestamps: true });
+
 module.exports = mongoose.model('user', UserSchema)
