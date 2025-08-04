@@ -140,7 +140,7 @@ const paymentVerification = async (req, res) => {
         const paymentRecord = await Payment.findOne({ razorpay_order_id: failedOrderId });
         if (paymentRecord) {
           paymentRecord.status = 'failed';
-          paymentRecord.razorpay_payment_id = failedPaymentId; // Store the failed payment ID
+          paymentRecord.razorpay_payment_id = failedPaymentId;
           paymentRecord.failedReason = failedReason;
           await paymentRecord.save();
           console.log(`Payment record for order ${failedOrderId} updated to 'failed' via webhook.`);
@@ -159,17 +159,22 @@ const paymentVerification = async (req, res) => {
       const capturedPaymentId = webhookPayload.payload.payment.entity.id;
       
       try {
-        const paymentRecord = await Payment.findOne({ razorpay_order_id: capturedOrderId });
+        // --- FIX IS HERE: Add the .populate() method to fetch product details ---
+        const paymentRecord = await Payment.findOne({ razorpay_order_id: capturedOrderId })
+            .populate({
+                path: 'productData.productId',
+                select: 'name price' // Select only the necessary fields
+            });
+
         if (paymentRecord) {
           paymentRecord.status = 'completed';
           paymentRecord.razorpay_payment_id = capturedPaymentId;
-          paymentRecord.failedReason = null; // Clear failed reason if it was previously set
+          paymentRecord.failedReason = null;
           await paymentRecord.save();
           console.log(`Payment record for order ${capturedOrderId} updated to 'completed' via webhook.`);
 
-          // --- Order Fulfillment Logic (Email, PDF, Cart Deletion) ---
           const userInfo = paymentRecord.user;
-          const productInfo = paymentRecord.productData;
+          const productInfo = paymentRecord.productData; // This now has populated product details
           const userData = paymentRecord.userData;
           const totalAmount = paymentRecord.totalAmount;
 
@@ -303,7 +308,6 @@ const paymentVerification = async (req, res) => {
         break;
   }
   
-  // Acknowledge the webhook receipt to Razorpay
   return res.status(200).send('Webhook received and processed.');
 };
 
