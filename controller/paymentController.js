@@ -1,6 +1,6 @@
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
-const Payment = require('../models/Payment');
+const Payment = require('../models/Payment'); // Assuming this is your Mongoose Payment model
 const Cart = require('../models/Cart');
 const nodemailer = require('nodemailer');
 const pdf = require('html-pdf');
@@ -20,7 +20,8 @@ const checkout = async (req, res) => {
   try {
     const { amount, userId, productDetails, userDetails } = req.body;
 
-    
+    console.log("Checkout initiated for user:", userId, "Amount:", amount);
+
     if (!amount || !userId || !productDetails || !userDetails) {
         throw new ApiError(400, "Missing crucial data for checkout: amount, userId, productDetails, userDetails.");
     }
@@ -44,37 +45,70 @@ const checkout = async (req, res) => {
     }
 
     const options = {
-      amount: totalAmount * 100, 
+      amount: totalAmount * 100, // amount in smallest currency unit (paise)
       currency: "INR",
     };
     const order = await instance.orders.create(options);
+    console.log("Razorpay order created:", order.id);
 
-    
+    // Create a new payment record in the database with 'pending' status
     const newPaymentRecord = await Payment.create({
         razorpay_order_id: order.id, 
         user: userId,
         productData: parsedProductDetails,
         userData: parsedUserDetails,
         totalAmount: totalAmount,
-        status: 'pending' 
+        status: 'pending' // Initial status
     });
+    console.log("Payment record created in DB with status 'pending':", newPaymentRecord._id);
 
     res.status(200).json({
       success: true,
       order,
-      
     });
 
   } catch (error) {
+    console.error("Error during checkout process:", error);
     sendErrorResponse(res, error, "Internal Server Error during checkout.");
   }
 };
 
 const paymentVerification = async (req, res) => {
+  console.log("--> Razorpay callback received:", req.body); // Log the entire incoming body
+
+  // --- Handle Failed Payments ---
+  if (req.body.error) {
+    const { order_id, description, reason } = req.body.error.metadata;
+    const errorDetails = req.body.error.description || "Unknown payment error";
+
+    console.error(`Payment failed callback detected for order ID: ${order_id}. Reason: ${reason}, Description: ${description}`);
+
+    try {
+      const paymentRecord = await Payment.findOne({ razorpay_order_id: order_id });
+      if (paymentRecord) {
+        paymentRecord.status = 'failed';
+        // Assuming your Payment schema has a 'failedReason' field. If not, you'll need to add it.
+        paymentRecord.failedReason = errorDetails; 
+        await paymentRecord.save();
+        console.log(`Payment record for order ${order_id} updated to 'failed'.`);
+      } else {
+        console.warn(`Payment record not found for failed order ID: ${order_id}.`);
+      }
+      // Redirect to a payment failure page on your frontend
+      // Ensure process.env.PAYMENT_FAILURE is configured to your frontend's failure route
+      return res.redirect(`${process.env.FRONTEND_URL_1}/paymentfailure?orderId=${order_id}&status=failed&reason=${encodeURIComponent(errorDetails)}`);
+
+    } catch (error) {
+      console.error("Error updating status for failed payment in DB:", error);
+      return sendErrorResponse(res, error, "Internal Server Error during failed payment processing.");
+    }
+  }
+
+  // --- Handle Successful Payments (Existing Logic) ---
   const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
 
-  
   if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      console.error("Missing Razorpay verification parameters for successful payment.");
       return sendErrorResponse(res, new ApiError(400, "Missing Razorpay verification parameters."));
   }
 
@@ -86,31 +120,31 @@ const paymentVerification = async (req, res) => {
     .digest("hex");
 
   const isAuthentic = expectedSignature === razorpay_signature;
+  console.log(`Signature verification result: ${isAuthentic ? 'Authentic' : 'Mismatch'}`);
+
 
   try {
-    
     const paymentRecord = await Payment.findOne({ razorpay_order_id: razorpay_order_id }).populate({
                                       path: 'productData.productId',
                                       select: 'name price'
                                   });
 
     if (!paymentRecord) {
+        console.error(`Payment record not found for order ID: ${razorpay_order_id}`);
         throw new ApiError(404, "Payment record not found for this order ID.");
     }
 
-    
     const userInfo = paymentRecord.user;
     const productInfo = paymentRecord.productData;
     const userData = paymentRecord.userData;
     const totalAmount = paymentRecord.totalAmount;
 
-
     if (isAuthentic) {
-      
       paymentRecord.razorpay_payment_id = razorpay_payment_id;
       paymentRecord.razorpay_signature = razorpay_signature;
       paymentRecord.status = 'completed'; 
       await paymentRecord.save(); 
+      console.log(`Payment record for order ${razorpay_order_id} updated to 'completed'.`);
 
       const receiptHtml = `<!DOCTYPE html>
         <html>
@@ -337,17 +371,22 @@ const paymentVerification = async (req, res) => {
 
       
       const deleteCart = await Cart.deleteMany({ user: userInfo });
+      console.log("User cart cleared.");
 
       res.redirect(`${process.env.PAYMENT_SUCCESS}?paymentId=${razorpay_payment_id}`);
     }
     else {
-      
+      // This block is for signature mismatch on a seemingly successful payment callback
+      console.error("Payment verification failed: Signature mismatch for order:", razorpay_order_id);
       paymentRecord.status = 'failed';
+      paymentRecord.failedReason = "Signature mismatch during verification"; // Add this detail
       await paymentRecord.save();
-      sendErrorResponse(res, new ApiError(400, "Payment verification failed: Signature mismatch."));
+      // Redirect to a failure page, as this is an unexpected scenario for a "successful" callback
+      return res.redirect(`${process.env.FRONTEND_URL_1}/paymentfailure?orderId=${razorpay_order_id}&status=failed&reason=${encodeURIComponent("Payment verification failed: Signature mismatch")}`);
     }
   }
   catch (error) {
+    console.error("Internal Server Error during payment verification:", error);
     sendErrorResponse(res, error, "Internal Server Error during payment verification.");
   }
 }
@@ -366,6 +405,7 @@ const getPaymentDetails = async (req, res) => {
             });
 
         if (!paymentRecord) {
+            console.error(`Payment details not found for payment ID: ${paymentId}`);
             throw new ApiError(404, 'Payment details not found.');
         }
 
@@ -374,15 +414,17 @@ const getPaymentDetails = async (req, res) => {
             paymentDetails: {
                 productData: paymentRecord.productData,
                 totalAmount: paymentRecord.totalAmount,
-                shippingCoast: 100,
+                shippingCoast: 100, // Hardcoded, ensure this is correct
                 userData: paymentRecord.userData,
                 razorpay_order_id: paymentRecord.razorpay_order_id,
                 razorpay_payment_id: paymentRecord.razorpay_payment_id,
-                status: paymentRecord.status 
+                status: paymentRecord.status,
+                failedReason: paymentRecord.failedReason || null // Include failed reason if available
             }
         });
 
     } catch (error) {
+        console.error("Internal Server Error fetching payment details:", error);
         sendErrorResponse(res, error, "Internal Server Error fetching payment details.");
     }
 };

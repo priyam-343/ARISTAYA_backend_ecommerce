@@ -9,11 +9,11 @@ const PaymentSchema = new Schema({
     },
     razorpay_payment_id: {
         type: String,
-        
+        // This field will be populated only for successful payments
     },
     razorpay_signature: {
         type: String,
-        
+        // This field will be populated only for successful payments
     },
     
     productData: [
@@ -28,8 +28,9 @@ const PaymentSchema = new Schema({
                 required: true,
                 min: [1, 'Quantity must be at least 1'],
             },
-            
-            
+            // You might want to store price at the time of purchase here as well,
+            // to prevent issues if product prices change later.
+            // currentPrice: { type: Number, required: true } 
         }
     ],
     userData: { 
@@ -54,8 +55,12 @@ const PaymentSchema = new Schema({
     },
     status: {
         type: String,
-        enum: ['pending', 'completed', 'failed'], 
+        enum: ['pending', 'completed', 'failed'], // 'failed' is now explicitly included
         default: 'pending',
+    },
+    failedReason: { // NEW FIELD: To store the reason for payment failure
+        type: String,
+        default: null, // Default to null if not a failed payment
     },
     paidAt: {
         type: Date,
