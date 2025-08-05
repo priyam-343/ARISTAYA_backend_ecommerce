@@ -52,6 +52,10 @@ const UserSchema = new Schema({
     },
     userState: {
         type: String
+    },
+    isFreeShippingEligible: {
+        type: Boolean,
+        default: false
     }
 }, { timestamps: true });
 

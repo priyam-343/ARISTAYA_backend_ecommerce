@@ -2,6 +2,7 @@ const Razorpay = require('razorpay');
 const crypto = require('crypto');
 const Payment = require('../models/Payment');
 const Cart = require('../models/Cart');
+const User = require('../models/User');
 const nodemailer = require('nodemailer');
 const pdf = require('html-pdf');
 const dotenv = require('dotenv');
@@ -12,25 +13,20 @@ dotenv.config();
 const { ApiError } = require('../utils/apiError');
 const { sendErrorResponse } = require('../utils/errorMiddleware');
 
-// Initialize Razorpay instance with your API keys
+const SHIPPING_CHARGE = 100;
+
 const instance = new Razorpay({
   key_id: process.env.RAZORPAY_API_KEY,
   key_secret: process.env.RAZORPAY_API_SECRET,
 });
 
-/**
- * Handles the initial checkout process.
- * Creates a Razorpay order and a pending payment record in the database.
- */
 const checkout = async (req, res) => {
   try {
-    const { amount, userId, productDetails, userDetails } = req.body;
+    const { userId, productDetails, userDetails } = req.body; 
+    console.log("Checkout initiated for user:", userId);
 
-    console.log("Checkout initiated for user:", userId, "Amount:", amount);
-
-    // --- Validation Checks ---
-    if (!amount || !userId || !productDetails || !userDetails) {
-        throw new ApiError(400, "Missing crucial data for checkout: amount, userId, productDetails, userDetails.");
+    if (!userId || !productDetails || !userDetails) {
+        throw new ApiError(400, "Missing crucial data for checkout: userId, productDetails, userDetails.");
     }
     if (!mongoose.Types.ObjectId.isValid(userId)) {
         throw new ApiError(400, "Invalid user ID format.");
@@ -38,10 +34,15 @@ const checkout = async (req, res) => {
 
     const parsedProductDetails = JSON.parse(productDetails);
     const parsedUserDetails = JSON.parse(userDetails);
-    const totalAmount = Number(amount);
+    
+    const subTotal = parsedProductDetails.reduce((acc, curr) => {
+        const price = curr.productId?.price || curr.price || 0;
+        const quantity = curr.quantity || 0;
+        return acc + (price * quantity);
+    }, 0);
 
-    if (isNaN(totalAmount) || totalAmount <= 0) {
-        throw new ApiError(400, "Invalid amount provided for checkout.");
+    if (isNaN(subTotal) || subTotal <= 0) {
+        throw new ApiError(400, "Invalid subtotal amount. Please ensure your cart has items with valid prices.");
     }
     if (!Array.isArray(parsedProductDetails) || parsedProductDetails.length === 0) {
         throw new ApiError(400, "Product details must be a non-empty array.");
@@ -51,22 +52,35 @@ const checkout = async (req, res) => {
         throw new ApiError(400, "Invalid user details provided (missing email or not an object).");
     }
 
-    // --- Create Razorpay Order ---
+    const user = await User.findById(userId);
+    if (!user) {
+        throw new ApiError(404, "User not found for checkout.");
+    }
+
+    let finalAmount = subTotal + SHIPPING_CHARGE;
+    let shippingStatus = 'Regular';
+
+    if (user.isFreeShippingEligible) {
+        finalAmount = subTotal;
+        shippingStatus = 'Free Shipping';
+        console.log(`User ${userId} is eligible for free shipping. Final amount is ${finalAmount}`);
+    }
+
     const options = {
-      amount: totalAmount * 100, // amount in smallest currency unit (paise)
+      amount: finalAmount * 100,
       currency: "INR",
     };
     const order = await instance.orders.create(options);
     console.log("Razorpay order created:", order.id);
 
-    // --- Create a new payment record in the database with 'pending' status ---
     const newPaymentRecord = await Payment.create({
         razorpay_order_id: order.id, 
         user: userId,
         productData: parsedProductDetails,
         userData: parsedUserDetails,
-        totalAmount: totalAmount,
-        status: 'pending' // Initial status
+        totalAmount: finalAmount,
+        shippingStatus: shippingStatus,
+        status: 'pending'
     });
     console.log("Payment record created in DB with status 'pending':", newPaymentRecord._id);
 
@@ -81,16 +95,6 @@ const checkout = async (req, res) => {
   }
 };
 
-/**
- * Handles incoming Razorpay webhooks.
- * This function is the single source of truth for payment status updates.
- *
- * IMPORTANT: This endpoint must be configured in the Razorpay dashboard
- * and must be accessible from the public internet.
- *
- * NOTE: Ensure your Express app uses `express.raw({ type: 'application/json' })`
- * for this specific route to get the raw body for signature verification.
- */
 const paymentVerification = async (req, res) => {
   console.log("--> Razorpay webhook received.");
   
@@ -102,7 +106,6 @@ const paymentVerification = async (req, res) => {
       return res.status(400).send('Webhook signature verification failed.');
   }
 
-  // Use the raw request body buffer for signature verification
   const rawBody = req.body.toString();
   
   const expectedSignature = crypto
@@ -110,7 +113,6 @@ const paymentVerification = async (req, res) => {
     .update(rawBody)
     .digest("hex");
 
-  // Check if the webhook is authentic
   if (expectedSignature !== razorpaySignatureHeader) {
       console.error("Webhook signature verification failed!");
       return res.status(400).send('Webhook signature verification failed.');
@@ -126,10 +128,8 @@ const paymentVerification = async (req, res) => {
       return res.status(400).send('Invalid webhook payload format.');
   }
 
-  // Handle different webhook event types
   switch (webhookPayload.event) {
     
-    // --- Handle a failed payment event ---
     case 'payment.failed':
       console.log("Received payment.failed webhook. Updating payment status.");
       const failedOrderId = webhookPayload.payload.payment.entity.order_id;
@@ -152,18 +152,16 @@ const paymentVerification = async (req, res) => {
       }
       break;
 
-    // --- Handle a successful payment event ---
     case 'payment.captured':
       console.log("Received payment.captured webhook. Updating payment status and processing order.");
       const capturedOrderId = webhookPayload.payload.payment.entity.order_id;
       const capturedPaymentId = webhookPayload.payload.payment.entity.id;
       
       try {
-        // --- FIX IS HERE: Add the .populate() method to fetch product details ---
         const paymentRecord = await Payment.findOne({ razorpay_order_id: capturedOrderId })
             .populate({
                 path: 'productData.productId',
-                select: 'name price' // Select only the necessary fields
+                select: 'name price'
             });
 
         if (paymentRecord) {
@@ -174,9 +172,17 @@ const paymentVerification = async (req, res) => {
           console.log(`Payment record for order ${capturedOrderId} updated to 'completed' via webhook.`);
 
           const userInfo = paymentRecord.user;
-          const productInfo = paymentRecord.productData; // This now has populated product details
+          const productInfo = paymentRecord.productData;
           const userData = paymentRecord.userData;
           const totalAmount = paymentRecord.totalAmount;
+          
+          const subtotal = productInfo.reduce((acc, curr) => {
+              const price = curr.productId?.price || 0;
+              const quantity = curr.quantity || 0;
+              return acc + (price * quantity);
+          }, 0);
+          
+          const displayedShippingCost = totalAmount - subtotal;
 
           const receiptHtml = `<!DOCTYPE html>
             <html>
@@ -217,27 +223,32 @@ const paymentVerification = async (req, res) => {
                     <thead>
                       <tr>
                         <th>Product Name</th>
-                        <th>Quantity</th>
-                        <th>Price</th>
+                        <th style="text-align: right;">Quantity</th>
+                        <th style="text-align: right;">Price</th>
                       </tr>
                     </thead>
                     <tbody>
                       ${productInfo.map((product) => `
                         <tr>
                           <td>${product.productId?.name || 'N/A'}</td>
-                          <td>${product.quantity}</td>
-                          <td>₹${product.productId?.price || 'N/A'}</td>
+                          <td style="text-align: right;">${product.quantity}</td>
+                          <td style="text-align: right;">₹${product.productId?.price || 'N/A'}</td>
                         </tr>
                       `).join('')}
+                       <tr>
+                        <td>Subtotal</td>
+                        <td style="text-align: right;"></td>
+                        <td style="text-align: right;">₹${subtotal}</td>
+                      </tr>
                       <tr>
                         <td>Shipping Charge</td>
-                        <td></td>
-                        <td>₹100</td>
+                        <td style="text-align: right;"></td>
+                        <td style="text-align: right;">₹${displayedShippingCost}</td>
                       </tr>
                       <tr class="total-row">
                         <td>Total</td>
-                        <td></td>
-                        <td>₹${totalAmount}</td>
+                        <td style="text-align: right;"></td>
+                        <td style="text-align: right;">₹${totalAmount}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -311,10 +322,6 @@ const paymentVerification = async (req, res) => {
   return res.status(200).send('Webhook received and processed.');
 };
 
-/**
- * Endpoint to get payment details for a specific payment ID.
- * This is used by your front-end to display order confirmation.
- */
 const getPaymentDetails = async (req, res) => {
     const { paymentId } = req.params;
     try {
@@ -333,12 +340,20 @@ const getPaymentDetails = async (req, res) => {
             throw new ApiError(404, 'Payment details not found.');
         }
 
+        const subtotal = paymentRecord.productData.reduce((acc, curr) => {
+            const price = curr.productId?.price || 0;
+            const quantity = curr.quantity || 0;
+            return acc + (price * quantity);
+        }, 0);
+
+        const displayedShippingCost = (paymentRecord.totalAmount || 0) - subtotal;
+
         res.status(200).json({
             success: true,
             paymentDetails: {
                 productData: paymentRecord.productData,
                 totalAmount: paymentRecord.totalAmount,
-                shippingCoast: 100,
+                shippingCoast: displayedShippingCost, 
                 userData: paymentRecord.userData,
                 razorpay_order_id: paymentRecord.razorpay_order_id,
                 razorpay_payment_id: paymentRecord.razorpay_payment_id,

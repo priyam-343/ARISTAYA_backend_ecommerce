@@ -8,8 +8,7 @@ const mongoose = require('mongoose');
 
 const { ApiError } = require('../utils/apiError');
 const { sendErrorResponse } = require('../utils/errorMiddleware');
-const { updateProductRating } = require('../utils/productRatingUtility'); 
-
+const { updateProductRating } = require('../utils/productRatingUtility');
 
 const validateObjectId = (id, idName = "ID") => {
     if (!id || !mongoose.Types.ObjectId.isValid(id)) {
@@ -152,7 +151,7 @@ const updateProductDetails = async (req, res) => {
         if (updateProduct.originalPrice !== undefined) {
             const originalPrice = parseFloat(updateProduct.originalPrice);
             if (isNaN(originalPrice) || originalPrice <= 0) {
-                throw new ApiError(400, "Original price must be a positive number.");
+                throw new ApiError(400, "Original price must be a positive number if provided.");
             }
             updateProduct.originalPrice = originalPrice;
         }
@@ -235,7 +234,7 @@ const addProduct = async (req, res) => {
             name,
             brand,
             price,
-            originalPrice, // --- NEW: Add originalPrice to the creation object ---
+            originalPrice,
             mainCategory,
             subCategory,
             images,
@@ -291,6 +290,32 @@ const deleteUserAccount = async (req, res) => {
     }
 };
 
+// NEW: Controller function to toggle free shipping eligibility
+const toggleFreeShipping = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    validateObjectId(userId, "user ID");
+
+    const user = await User.findById(userId);
+    if (!user) {
+        throw new ApiError(404, "User not found.");
+    }
+
+    user.isFreeShippingEligible = !user.isFreeShippingEligible;
+    await user.save();
+    
+    res.status(200).json({
+        success: true,
+        user: { isFreeShippingEligible: user.isFreeShippingEligible },
+        message: `User free shipping status updated to ${user.isFreeShippingEligible}.`
+    });
+
+  } catch (error) {
+    sendErrorResponse(res, error, "Error toggling free shipping status.");
+  }
+};
+
+
 module.exports = {
     getAllUsersInfo,
     getSingleUserInfo,
@@ -304,5 +329,6 @@ module.exports = {
     userPaymentDetails,
     addProduct,
     deleteProduct,
-    deleteUserAccount
+    deleteUserAccount,
+    toggleFreeShipping // NEW: Export the new function
 };

@@ -14,7 +14,8 @@ const {
     getAllUsersInfo, getSingleUserInfo, getUserCart, getUserWishlist,
     getUserReview, deleteUserReview, deleteUserCartItem, deleteUserWishlistItem,
     updateProductDetails, userPaymentDetails, addProduct, deleteProduct,
-    deleteUserAccount
+    deleteUserAccount,
+    toggleFreeShipping // NEW: Import the new controller function
 } = require('../../controller/AdminControl');
 
 const { chartData } = require('../../controller/AllProductInfo');
@@ -281,6 +282,8 @@ router.delete('/usercart/:id', authAdmin, deleteUserCartItem);
 router.delete('/userwishlist/:id', authAdmin, deleteUserWishlistItem);
 router.delete('/deleteproduct/:id', authAdmin, deleteProduct);
 
+// NEW: Route to toggle free shipping for a specific user
+router.put('/user/:userId/freeshipping', authAdmin, toggleFreeShipping);
 
 router.delete('/deleteuser/:id', authAdmin, deleteUserAccount);
 
