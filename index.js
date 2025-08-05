@@ -29,7 +29,7 @@ app.use(express.urlencoded({ extended: true }))
 
 app.use(express.json())
 app.use(cors());
-app.use(express.static(path.join(__dirname, 'build')));
+//app.use(express.static(path.join(__dirname, 'build')));
 
 // ➡️ ADD THIS HEALTH CHECK ROUTE HERE ⬅️
 // This route will respond to GET requests at the root URL (e.g., https://aristaya-backend-ecommerce.onrender.com/)
