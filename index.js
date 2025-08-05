@@ -10,7 +10,7 @@ const cart = require('./routes/cart')
 const wishlist = require('./routes/wishlist')
 const product = require('./routes/product')
 const review = require('./routes/review')
-const paymentRoute = require('./routes/paymentRoute') 
+const paymentRoute = require('./routes/paymentRoute')
 const forgotPassword = require('./routes/forgotPassword')
 const AdminRoute = require('./routes/Admin/AdminAuth')
 
@@ -31,7 +31,14 @@ app.use(express.json())
 app.use(cors());
 app.use(express.static(path.join(__dirname, 'build')));
 
-app.use(checkOrigin);
+// ➡️ ADD THIS HEALTH CHECK ROUTE HERE ⬅️
+// This route will respond to GET requests at the root URL (e.g., https://aristaya-backend-ecommerce.onrender.com/)
+// It comes BEFORE checkOrigin to bypass any authentication/origin checks for this specific endpoint.
+app.get('/', (req, res) => {
+    res.status(200).send('Backend is alive and ready!');
+});
+
+app.use(checkOrigin); // Your origin/authentication middleware
 
 app.use('/api/auth', auth)
 
@@ -46,7 +53,7 @@ app.use('/api/review', review)
 app.use('/api/admin', AdminRoute)
 
 
-app.use('/api/payment', paymentRoute) 
+app.use('/api/payment', paymentRoute)
 
 app.use('/api/password', forgotPassword)
 
