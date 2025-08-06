@@ -183,7 +183,7 @@ const paymentVerification = async (req, res) => {
           }, 0);
           
           const displayedShippingCost = totalAmount - subtotal;
-
+          
           const receiptHtml = `<!DOCTYPE html>
             <html>
               <head>
@@ -230,9 +230,9 @@ const paymentVerification = async (req, res) => {
                     <tbody>
                       ${productInfo.map((product) => `
                         <tr>
-                          <td>${product.productId?.name || 'N/A'}</td>
+                          <td>${product.productId?.name || 'N/A'} (₹${product.productId?.price || 'N/A'})</td>
                           <td style="text-align: right;">${product.quantity}</td>
-                          <td style="text-align: right;">₹${product.productId?.price || 'N/A'}</td>
+                          <td style="text-align: right;">₹${product.productId?.price * product.quantity || 'N/A'}</td>
                         </tr>
                       `).join('')}
                        <tr>
