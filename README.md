@@ -79,8 +79,7 @@ npm install
 
 
 Environment Variables
-Create a .env file in the project root and add the following variables. Crucially, replace the ?? placeholders with your actual values.
-
+Create a .env file in the project root and add the following variables.
 
 PORT=2000
 
