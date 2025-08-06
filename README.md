@@ -1,82 +1,139 @@
 ARISTAYA E-commerce Backend
-This is the backend API for the ARISTAYA E-commerce Platform.
+This is the robust backend application powering the ARISTAYA E-commerce Platform. It's built to handle all the heavy lifting, from user authentication and product management to secure payment processing and admin controls.
 
 Features
-User Management (Authentication, Authorization with JWT)
+This backend provides a comprehensive set of APIs to support the frontend application:
 
-Product Management (CRUD operations)
+User & Admin Authentication: Secure JWT-based authentication for both regular users and administrators.
 
-Order Processing & History
+User Management: APIs for user registration, login, profile updates, and account deletion. Includes features for email verification (powered by Firebase) and a secure forgot/reset password flow.
 
-Admin Dashboard Data APIs
+Admin Controls: Extensive endpoints for administrators to manage products, users, orders, and reviews. This includes:
 
-Payment Gateway Integration (Razorpay)
+Centralized user management: View user profiles, carts, wishlists, and reviews.
 
-Mail Service
+Admin approval system: New admin registrations require approval from a super-admin.
 
-Forgot & Reset Password
+Product CRUD: Create, read, update, and delete product listings.
 
-Cart & Wishlist Management
+Analytics: Provides data for dashboard statistics, including revenue, order trends, and user activity.
 
-Product Reviews
+Dynamic Free Shipping: Admins can toggle free shipping eligibility for individual users.
+
+Product Catalog: APIs for fetching products by type, category, or individual ID.
+
+Shopping Cart & Wishlist: Manages user carts and wishlists, allowing items to be added, removed, and fetched.
+
+Secure Payment Processing: Integrates with Razorpay for handling payments, using a robust webhook system as the single source of truth for transaction statuses.
+
+Email Service: Integrated mail service for order confirmations, password resets, and admin approvals.
 
 Tech Stack
-NodeJS
+Node.js
 
-ExpressJS
+Express.js
 
-MongoDB (Mongoose)
+MongoDB (Mongoose ODM)
 
-JWT
+JWT (JSON Web Tokens) for authentication
 
-Razorpay
+Bcrypt for password hashing
 
-Nodemailer
+Razorpay for payment gateway
+
+Nodemailer for email services
+
+HTML-PDF for generating PDF receipts
+
+Firebase Admin SDK for email verification and Google Sign-In integration
 
 Frontend Counterpart
-This backend supports the ARISTAYA E-commerce Frontend application.
-
+This backend serves APIs to the ARISTAYA E-commerce Frontend.
 Frontend Repository: https://github.com/priyam-343/ARISTAYA_frontend_ecommerce.git
 
 How to Run Locally
-1. Prerequisites
+Prerequisites
 Node.js & npm (or Yarn)
 
-MongoDB instance (local or Atlas)
+MongoDB instance (local or cloud-hosted like MongoDB Atlas)
 
-2. Installation
+Razorpay account (for API keys and webhook setup)
+
+Gmail account (for Nodemailer email sending)
+
+Firebase project (for Admin SDK configuration)
+
+Installation
 Clone this repository:
 
 git clone https://github.com/priyam-343/ARISTAYA_backend_ecommerce.git
+
+Navigate into the project directory:
+
 cd ARISTAYA_backend_ecommerce
 
 Install dependencies:
 
 npm install
 
-3. Environment Variables
-Create a .env file in the project root.
 
-.env Example:
+
+Environment Variables
+Create a .env file in the project root and add the following variables. Crucially, replace the ?? placeholders with your actual values.
+
 
 PORT=2000
-MONGO_URL=your_mongodb_atlas_connection_string
-JWT_SECRET=your_jwt_secret_key
-RAZORPAY_API_KEY=your_razorpay_api_key
-RAZORPAY_API_SECRET=your_razorpay_api_secret
-EMAIL=your_email@example.com
-EMAIL_PASSWORD=your_email_password
-FORGOT_PASSWORD=http://localhost:3000/user/reset
-PAYMENT_SUCCESS=http://localhost:3000/paymentsuccess
-ADMIN_KEY=your_admin_secret_key
-FRONTEND_URL=http://localhost:3000
 
-4. Run Server
+MONGO_URL=YOUR_MONGODB_CONNECTION_STRING
+
+JWT_SECRET=YOUR_JWT_SECRET_KEY
+
+RAZORPAY_API_KEY=YOUR_RAZORPAY_KEY_ID
+
+RAZORPAY_API_SECRET=YOUR_RAZORPAY_KEY_SECRET
+
+RAZORPAY_WEBHOOK_SECRET=YOUR_RAZORPAY_WEBHOOK_SECRET
+
+PAYMENT_SUCCESS=http://localhost:3000/paymentsuccess
+
+EMAIL=YOUR_GMAIL_ADDRESS@gmail.com
+
+EMAIL_PASSWORD=YOUR_GMAIL_APP_PASSWORD
+
+FORGOT_PASSWORD=http://localhost:3000/user/reset
+
+ADMIN_KEY=YOUR_ADMIN_SECRET_KEY
+
+ADMIN_EMAIL=YOUR_SUPER_ADMIN_EMAIL@gmail.com
+
+FRONTEND_URL_1=http://localhost:3000
+
+BACKEND_URL=http://localhost:2000
+
+FIREBASE_PROJECT_ID=YOUR_FIREBASE_PROJECT_ID
+
+FIREBASE_ADMIN_SDK_CONFIG={YOUR_FIREBASE_ADMIN_SDK_JSON_CONFIG}
+
+
+MONGO_URL: Your MongoDB connection string (e.g., from MongoDB Atlas).
+
+JWT_SECRET: A strong, random string for JWT token signing.
+
+RAZORPAY_API_KEY / RAZORPAY_API_SECRET: Get these from your Razorpay dashboard.
+
+RAZORPAY_WEBHOOK_SECRET: A secret key you define in your Razorpay webhook settings.
+
+EMAIL / EMAIL_PASSWORD: Your Gmail address and an App Password generated for it (not your regular Gmail password, for security).
+
+ADMIN_KEY: A secret key for admin registration.
+
+ADMIN_EMAIL: The email address of your super-admin who approves new admin registrations.
+
+FIREBASE_ADMIN_SDK_CONFIG: This is a JSON object. Crucially, this should be the entire JSON content of your Firebase Admin SDK private key file, stringified. It should start and end with {...}. You get this from Firebase Project Settings -> Service Accounts -> Generate new private key.
+
+Run Application
 npm start
 
-Server runs on http://localhost:2000 (or specified port).
-
-License
-This project is licensed under the MIT License. See the LICENSE file for more information.
+The backend server will start on http://localhost:2000.
 
 Developed by Priyam Kumar
