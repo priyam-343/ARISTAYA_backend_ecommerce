@@ -31,29 +31,19 @@ app.use(express.json())
 app.use(cors());
 app.use(express.static(path.join(__dirname, 'build')));
 
-app.use(checkOrigin);
-
-// Add this new route handler for the root path
 app.get('/', (req, res) => {
     res.status(200).send('E-commerce backend is running!');
 });
 
+app.use(checkOrigin);
 
 app.use('/api/auth', auth)
-
 app.use('/api/product', product)
-
 app.use('/api/cart', cart)
-
 app.use('/api/wishlist', wishlist)
-
 app.use('/api/review', review)
-
 app.use('/api/admin', AdminRoute)
-
-
 app.use('/api/payment', paymentRoute)
-
 app.use('/api/password', forgotPassword)
 
 app.listen(port, () => {
