@@ -10,7 +10,7 @@ const cart = require('./routes/cart')
 const wishlist = require('./routes/wishlist')
 const product = require('./routes/product')
 const review = require('./routes/review')
-const paymentRoute = require('./routes/paymentRoute') 
+const paymentRoute = require('./routes/paymentRoute')
 const forgotPassword = require('./routes/forgotPassword')
 const AdminRoute = require('./routes/Admin/AdminAuth')
 
@@ -33,6 +33,12 @@ app.use(express.static(path.join(__dirname, 'build')));
 
 app.use(checkOrigin);
 
+// Add this new route handler for the root path
+app.get('/', (req, res) => {
+    res.status(200).send('E-commerce backend is running!');
+});
+
+
 app.use('/api/auth', auth)
 
 app.use('/api/product', product)
@@ -46,7 +52,7 @@ app.use('/api/review', review)
 app.use('/api/admin', AdminRoute)
 
 
-app.use('/api/payment', paymentRoute) 
+app.use('/api/payment', paymentRoute)
 
 app.use('/api/password', forgotPassword)
 
