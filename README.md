@@ -76,7 +76,4 @@ npm start
 
 Server runs on http://localhost:2000 (or specified port).
 
-License
-This project is licensed under the MIT License. See the LICENSE file for more information.
-
-Developed by Priyam Kumar
+Developed by Priyam Kumar.
