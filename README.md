@@ -71,52 +71,21 @@ npm install
 Environment Variables Create a .env file in the project root and add the following variables.
 
 PORT=2000
-
 MONGO_URL=YOUR_MONGODB_CONNECTION_STRING
-
 JWT_SECRET=YOUR_JWT_SECRET_KEY
-
 RAZORPAY_API_KEY=YOUR_RAZORPAY_KEY_ID
-
 RAZORPAY_API_SECRET=YOUR_RAZORPAY_KEY_SECRET
-
 RAZORPAY_WEBHOOK_SECRET=YOUR_RAZORPAY_WEBHOOK_SECRET
-
-PAYMENT_SUCCESS=http://localhost:3000/paymentsuccess
-
+PAYMENT_SUCCESS=YOUR_FRONTEND_URL/paymentsuccess
 EMAIL=YOUR_GMAIL_ADDRESS@gmail.com
-
 EMAIL_PASSWORD=YOUR_GMAIL_APP_PASSWORD
-
-FORGOT_PASSWORD=http://localhost:3000/user/reset
-
+FORGOT_PASSWORD=YOUR_FRONTEND_URL/user/reset
 ADMIN_KEY=YOUR_ADMIN_SECRET_KEY
-
 ADMIN_EMAIL=YOUR_SUPER_ADMIN_EMAIL@gmail.com
-
-FRONTEND_URL_1=http://localhost:3000
-
-BACKEND_URL=http://localhost:2000
-
+FRONTEND_URL_1=YOUR_FRONTEND_URL
+BACKEND_URL=YOUR_BACKEND_URL
 FIREBASE_PROJECT_ID=YOUR_FIREBASE_PROJECT_ID
-
 FIREBASE_ADMIN_SDK_CONFIG={YOUR_FIREBASE_ADMIN_SDK_JSON_CONFIG}
-
-MONGO_URL: Your MongoDB connection string (e.g., from MongoDB Atlas).
-
-JWT_SECRET: A strong, random string for JWT token signing.
-
-RAZORPAY_API_KEY / RAZORPAY_API_SECRET: Get these from your Razorpay dashboard.
-
-RAZORPAY_WEBHOOK_SECRET: A secret key you define in your Razorpay webhook settings.
-
-EMAIL / EMAIL_PASSWORD: Your Gmail address and an App Password generated for it (not your regular Gmail password, for security).
-
-ADMIN_KEY: A secret key for admin registration.
-
-ADMIN_EMAIL: The email address of your super-admin who approves new admin registrations.
-
-FIREBASE_ADMIN_SDK_CONFIG: This is a JSON object. Crucially, this should be the entire JSON content of your Firebase Admin SDK private key file, stringified. It should start and end with {...}. You get this from Firebase Project Settings -> Service Accounts -> Generate new private key.
 
 Run Application npm start
 
