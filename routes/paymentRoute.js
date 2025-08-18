@@ -1,5 +1,5 @@
 const express = require('express');
-const { checkout, paymentVerification, getPaymentDetails } = require('../controller/paymentController'); 
+const { checkout, paymentVerification, getPaymentDetails, reorderController } = require('../controller/paymentController'); 
 const router = express.Router();
 const Payment = require('../models/Payment'); 
 const Product = require('../models/Product'); 
@@ -47,5 +47,8 @@ router.get('/getPreviousOrders', authUser, async (req, res) => {
     sendErrorResponse(res, error, "Something went wrong while fetching previous orders.");
   }
 });
+
+// NEW: Endpoint to handle reordering a previous order
+router.post('/reorder', authUser, reorderController);
 
 module.exports = router;
