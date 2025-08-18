@@ -66,10 +66,10 @@ RAZORPAY_API_KEY=your_razorpay_api_key
 RAZORPAY_API_SECRET=your_razorpay_api_secret
 EMAIL=your_email@example.com
 EMAIL_PASSWORD=your_email_password
-FORGOT_PASSWORD=http://localhost:3000/user/reset
-PAYMENT_SUCCESS=http://localhost:3000/paymentsuccess
+FORGOT_PASSWORD=YOUR_FRONTEND_URL/user/reset
+PAYMENT_SUCCESS=YOUR_FRONTEND_URL/paymentsuccess
 ADMIN_KEY=your_admin_secret_key
-FRONTEND_URL=http://localhost:3000
+FRONTEND_URL=YOUR_FRONTEND_URL
 
 4. Run Server
 npm start
